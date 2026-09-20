@@ -1,0 +1,9 @@
+[submodule "Middlewares/ARM/CMSIS-DSP"]
+	path = Middlewares/ARM/CMSIS-DSP
+	url = https://github.com/ARM-software/CMSIS-DSP.git
+[submodule "Drivers/b-u585i-iot02a-bsp"]
+	path = Drivers/b-u585i-iot02a-bsp
+	url = https://github.com/STMicroelectronics/b-u585i-iot02a-bsp.git
+[submodule "Drivers/stm32-bsp-common"]
+	path = Drivers/stm32-bsp-common
+	url = https://github.com/STMicroelectronics/stm32-bsp-common.git
