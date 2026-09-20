@@ -65,8 +65,22 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
 
     # Add user defined libraries
+    CMSISDSP::CMSISDSP
+    STM32AudioProc
+    AudioPreprocessing
 )
 # CMakeLists.txt for STM32Cube AI Studio
 include(AI/STMicroelectronics.Middlewares.cmake)
 # CMakeLists.txt for STM32Cube AI Studio
 include(AI/STMicroelectronics.STM32CubeAIStudio.cmake)
+
+# CMSIS-DSP
+set(CMSISCORE "${CMAKE_SOURCE_DIR}/Drivers/CMSIS" CACHE PATH "")
+set(CMSISDSP_INSTALL OFF CACHE BOOL "" FORCE)
+add_subdirectory(Middlewares/ARM/CMSIS-DSP/Source cmsis-dsp-build)
+
+# Middlewares
+add_subdirectory(Middlewares/ST/STM32_AI_AudioPreprocessing_Library)
+
+# Lib
+add_subdirectory(Lib)
