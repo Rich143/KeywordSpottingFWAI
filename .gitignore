@@ -63,3 +63,16 @@ build/
 
 # Dataset
 dataset/
+
+
+# Eclipse / Java IDE settings
+.settings/
+.project
+.classpath
+
+# VS Code - Ignore local user state, keep shared settings
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
