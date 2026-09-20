@@ -1,0 +1,210 @@
+ST Edge AI Core v4.0.1-20581 7ed50de05
+Created date          : 2026-09-20 10:27:17
+Parameters            : analyze --model /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v7_int8_softmax.tflite --valinput /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz --mode target --optimization balanced --name network --verbosity 1 --c-api st-ai --target stm32u5 --workspace /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_ws --output /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output --memory-pool /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/mempools.json
+
+Exec/report summary (analyze)
+----------------------------------------------------------------------------------------------------------------------------------------------
+model file         :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v7_int8_softmax.tflite   
+type               :   tflite                                                                                                                 
+c_name             :   network                                                                                                                
+compression        :   lossless                                                                                                               
+options            :   allocate-inputs, allocate-outputs, multi-heaps, use-lite-runtime, use-st-ai                                            
+optimization       :   balanced                                                                                                               
+target/series      :   stm32u5                                                                                                                
+memory pool        :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/mempools.json                
+workspace dir      :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_ws                     
+output dir         :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output                 
+vinput files       :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz      
+model_fmt          :   ss/sa per channel                                                                                                      
+model_name         :   kws_v7_int8_softmax                                                                                                    
+model_hash         :   0x9c5531a1eda88feae352d7c1ad53c132                                                                                     
+params #           :   8,973 items (8.96 KiB)                                                                                                 
+----------------------------------------------------------------------------------------------------------------------------------------------
+input 1/1          :   'serving_default_ke..ensor_1050', int8(1x30x45), 1.32 KBytes, QLinear(0.017803887,-35,int8), activations               
+output 1/1         :   'nl_10', int8(1x5), 5 Bytes, QLinear(0.003906250,-128,int8), activations                                               
+macc               :   423,544                                                                                                                
+weights (ro)       :   9,180 B (8.96 KiB) (1 segment) / -26,712(-74.4%) vs float model                                                        
+activations (rw)   :   7,736 B (7.55 KiB) (1 segment) *                                                                                       
+ram (total)        :   7,736 B (7.55 KiB) = 7,736 + 0 + 0                                                                                     
+----------------------------------------------------------------------------------------------------------------------------------------------
+(*) 'input'/'output' buffers are allocated in the activations buffer
+ 
+ Memory-pools summary (activations/ domain)
+ --------------- ---- ---------------------- --------- 
+ name            id   used                   buffer#   
+ --------------- ---- ---------------------- --------- 
+ RAM             0    7.55 KiB (1.0%)        13        
+ weights_array   1    8.96 KiB (918000.0%)   8         
+ --------------- ---- ---------------------- --------- 
+
+Model name - kws_v7_int8_softmax
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+m_id   layer (type,original)                      oshape                 param/size         macc                     connected to   | c_size            c_macc               c_type                
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+0      serving_default_ke..ensor_1050 (Input, )   [b:1,h:30,c:45]                                                                   |                                        
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+3      reshape_3 (Reshape, RESHAPE)               [b:1,h:30,w:45,c:1]                              serving_default_ke..ensor_1050   |                                        
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+4      conv2d_4 (Conv2D, CONV_2D)                 [b:1,h:28,w:43,c:16]   160/208         173,392                        reshape_3   | -208(-100.0%)     -173,392(-100.0%)    
+       nl_4_nl (Nonlinearity, CONV_2D)            [b:1,h:28,w:43,c:16]                    19,264                         conv2d_4   |                   -19,264(-100.0%)     
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+5      pool_5 (Pool, MAX_POOL_2D)                 [b:1,h:7,w:10,c:16]                     17,920                          nl_4_nl   | +208(+100.0%)     +173,392(+967.6%)    Conv2D_[0]            
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+6      conv2d_6 (Conv2D, CONV_2D)                 [b:1,h:5,w:8,c:24]     3,480/3,552     138,264                           pool_5   |                                        Conv2D_[1]            
+       nl_6_nl (Nonlinearity, CONV_2D)            [b:1,h:5,w:8,c:24]                         960                         conv2d_6   |                   -960(-100.0%)        
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+7      conv2d_7 (Conv2D, CONV_2D)                 [b:1,h:3,w:6,c:24]     5,208/5,280      93,336                          nl_6_nl   | -5,280(-100.0%)   -93,336(-100.0%)     
+       nl_7_nl (Nonlinearity, CONV_2D)            [b:1,h:3,w:6,c:24]                         432                         conv2d_7   |                   -432(-100.0%)        
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+8      pool_8 (Pool, REDUCE_MAX)                  [b:1,h:1,w:1,c:24]                         432                          nl_7_nl   | +5,280(+100.0%)   +93,336(+21605.6%)   Conv2D_[2]            
+       reshape_8_reshape (Reshape, REDUCE_MAX)    [b:1,c:24]                                                               pool_8   |                                        
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+9      tfl_pseudo_qconst1 (Placeholder, )         [b:5,c:24]             120/120                                                    | +20(+16.7%)       +125(+100.0%)        Dense_[3]             
+       tfl_pseudo_qconst (Placeholder, )          [b:5]                  5/20                                                       | -20(-100.0%)                           
+       gemm_9 (Gemm, FULLY_CONNECTED)             [b:1,c:5]                                  125                reshape_8_reshape   |                   -125(-100.0%)        
+                                                                                                               tfl_pseudo_qconst1   | 
+                                                                                                                tfl_pseudo_qconst   | 
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+10     nl_10 (Nonlinearity, SOFTMAX)              [b:1,c:5]                                   75                           gemm_9   |                                        Nonlinearity_[o][4]   
+------ ------------------------------------------ ---------------------- ------------- --------- -------------------------------- --- ----------------- -------------------- --------------------- 
+model/c-model: macc=444,200/423,544 -20,656(-4.7%) weights=9,180/9,180  activations=--/7,736 io=--/0
+
+
+
+Generated C-graph summary
+------------------------------------------------------------------------------------------------------------------------
+model name            : kws_v7_int8_softmax
+c-name                : network
+c-node #              : 5
+c-array #             : 21
+activations size      : 7736 (1 segment)
+weights size          : 9180 (1 segment)
+macc                  : 423544
+inputs                : ['serving_default_keras_tensor_1050_output']
+outputs               : ['nl_10_output']
+
+C-Arrays (21)
+------ ------------------------------------------ ----------- ----------------- ----------- --------- 
+c_id   name (*_array)                             item/size   domain/mem-pool   c-type      comment   
+------ ------------------------------------------ ----------- ----------------- ----------- --------- 
+0      conv2d_4_bias                              16/64       weights/weights   const s32             
+1      conv2d_4_output                            1120/1120   activations/RAM   s8                    
+2      conv2d_4_scratch0                          548/548     activations/RAM   s8                    
+3      conv2d_4_scratch1                          2752/2752   activations/RAM   s8                    
+4      conv2d_4_weights                           144/144     weights/weights   const s8              
+5      conv2d_6_bias                              24/96       weights/weights   const s32             
+6      conv2d_6_output                            960/960     activations/RAM   s8                    
+7      conv2d_6_scratch0                          6032/6032   activations/RAM   s8                    
+8      conv2d_6_weights                           3456/3456   weights/weights   const s8              
+9      conv2d_7_bias                              24/96       weights/weights   const s32             
+10     conv2d_7_output                            24/24       activations/RAM   s8                    
+11     conv2d_7_scratch0                          6320/6320   activations/RAM   s8                    
+12     conv2d_7_scratch1                          432/432     activations/RAM   s8                    
+13     conv2d_7_weights                           5184/5184   weights/weights   const s8              
+14     gemm_9_bias                                5/20        weights/weights   const s32             
+15     gemm_9_output                              5/5         activations/RAM   s8                    
+16     gemm_9_scratch0                            49/98       activations/RAM   s16                   
+17     gemm_9_weights                             120/120     weights/weights   const s8              
+18     nl_10_output                               5/5         activations/RAM   s8          /output   
+19     nl_10_scratch0                             256/1024    activations/RAM   s32                   
+20     serving_default_keras_tensor_1050_output   1350/1350   activations/RAM   s8          /input    
+------ ------------------------------------------ ----------- ----------------- ----------- --------- 
+
+C-Layers (5)
+------ ---------------- ---- --------------- -------- ------ --------------------------------------------- ---------------------- 
+c_id   name (*_layer)   id   layer_type      macc     rom    tensors                                       shape (array id)       
+------ ---------------- ---- --------------- -------- ------ --------------------------------------------- ---------------------- 
+0      conv2d_4         5    Conv2D          191312   208    I: serving_default_keras_tensor_1050_output   int8(1x30x45) (20)     
+                                                             S: conv2d_4_scratch0                                                 
+                                                             S: conv2d_4_scratch1                                                 
+                                                             W: conv2d_4_weights                           int8(16x3x3x1) (4)     
+                                                             W: conv2d_4_bias                              int32(16) (0)          
+                                                             O: conv2d_4_output                            int8(1x7x10x16) (1)    
+------ ---------------- ---- --------------- -------- ------ --------------------------------------------- ---------------------- 
+1      conv2d_6         6    Conv2D          138264   3552   I: conv2d_4_output                            int8(1x7x10x16) (1)    
+                                                             S: conv2d_6_scratch0                                                 
+                                                             W: conv2d_6_weights                           int8(24x3x3x16) (8)    
+                                                             W: conv2d_6_bias                              int32(24) (5)          
+                                                             O: conv2d_6_output                            int8(1x5x8x24) (6)     
+------ ---------------- ---- --------------- -------- ------ --------------------------------------------- ---------------------- 
+2      conv2d_7         8    Conv2D          93768    5280   I: conv2d_6_output                            int8(1x5x8x24) (6)     
+                                                             S: conv2d_7_scratch0                                                 
+                                                             S: conv2d_7_scratch1                                                 
+                                                             W: conv2d_7_weights                           int8(24x3x3x24) (13)   
+                                                             W: conv2d_7_bias                              int32(24) (9)          
+                                                             O: conv2d_7_output                            int8(1x1x1x24) (10)    
+------ ---------------- ---- --------------- -------- ------ --------------------------------------------- ---------------------- 
+3      gemm_9           9    Dense           125      140    I: conv2d_7_output                            int8(1x1x1x24) (10)    
+                                                             S: gemm_9_scratch0                                                   
+                                                             W: gemm_9_weights                             int8(5x24) (17)        
+                                                             W: gemm_9_bias                                int32(5) (14)          
+                                                             O: gemm_9_output                              int8(1x5) (15)         
+------ ---------------- ---- --------------- -------- ------ --------------------------------------------- ---------------------- 
+4      nl_10            10   Nonlinearity    75       0      I: gemm_9_output                              int8(1x5) (15)         
+                                                             S: nl_10_scratch0                                                    
+                                                             O: nl_10_output                               int8(1x5) (18)         
+------ ---------------- ---- --------------- -------- ------ --------------------------------------------- ---------------------- 
+
+
+
+Number of operations per c-layer
+------- ------ ----------------------- --------- ------------ 
+c_id    m_id   name (type)                   #op         type 
+------- ------ ----------------------- --------- ------------ 
+0       5      conv2d_4 (Conv2D)         191,312   smul_s8_s8 
+1       6      conv2d_6 (Conv2D)         138,264   smul_s8_s8 
+2       8      conv2d_7 (Conv2D)          93,768   smul_s8_s8 
+3       9      gemm_9 (Dense)                125   smul_s8_s8 
+4       10     nl_10 (Nonlinearity)           75     op_s8_s8 
+------- ------ ----------------------- --------- ------------ 
+total                                    423,544 
+
+Number of operation types
+---------------- --------- ----------- 
+operation type           #           % 
+---------------- --------- ----------- 
+smul_s8_s8         423,469      100.0% 
+op_s8_s8                75        0.0% 
+
+Complexity report (model)
+------ -------------------- ------------------------- ------------------------- ------ 
+m_id   name                 c_macc                    c_rom                     c_id   
+------ -------------------- ------------------------- ------------------------- ------ 
+5      pool_5               ||||||||||||||||  45.2%   |                  2.3%   [0]    
+6      conv2d_6             |||||||||||       32.6%   |||||||||||       38.7%   [1]    
+8      pool_8               ||||||||          22.1%   ||||||||||||||||  57.5%   [2]    
+9      tfl_pseudo_qconst1   |                  0.0%   |                  1.5%   [3]    
+10     nl_10                |                  0.0%   |                  0.0%   [4]    
+------ -------------------- ------------------------- ------------------------- ------ 
+macc=423,544 weights=9,180 act=7,736 ram_io=0
+ 
+ Requested memory size by section - "stm32u5" target
+ ------------------------------- -------- -------- ------- ------- 
+ module                              text   rodata    data     bss 
+ ------------------------------- -------- -------- ------- ------- 
+ NetworkRuntime1201_CM33_GCC.a     18,532        0       0       0 
+ network.o                          1,394      508   1,740      64 
+ lib (toolchain)*                       0        0       0       0 
+ ------------------------------- -------- -------- ------- ------- 
+ RT total**                        19,926      508   1,740      64 
+ ------------------------------- -------- -------- ------- ------- 
+ weights                                0    9,184       0       0 
+ activations                            0        0       0   7,736 
+ states                                 0        0       0       0 
+ io                                     0        0       0       0 
+ ------------------------------- -------- -------- ------- ------- 
+ TOTAL                             19,926    9,692   1,740   7,800 
+ ------------------------------- -------- -------- ------- ------- 
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+  
+  Summary - "stm32u5" target
+  ---------------------------------------------------
+               FLASH (ro)      %*   RAM (rw)       % 
+  ---------------------------------------------------
+  RT total         22,174   70.7%      1,804   18.9% 
+  ---------------------------------------------------
+  TOTAL            31,358              9,540         
+  ---------------------------------------------------
+  *  rt/total
+

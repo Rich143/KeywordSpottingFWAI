@@ -1,0 +1,193 @@
+>>> /Applications/ST/STEdgeAI/4.0/Utilities/macarm/stedgeai validate --model /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v5_int8.tflite --valinput /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v5.npz --mode host --optimization balanced --name network --verbosity 1 --c-api st-ai --target stm32u5 --memory-pool /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/mempools.json --save-csv --workspace /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_ws --output /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_output
+ST Edge AI Core v4.0.1-20581 7ed50de05
+
+Setting validation data...
+
+ loading file: /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v5.npz
+
+  available entries: ['x_test', 'y_test'] selector="None"
+  selected entries: x_test/y_test
+
+   samples are reshaped: (1047, 30, 45) -> (1047, 30, 1, 45)
+
+   samples are reshaped: (1047, 5) -> (1047, 1, 1, 5)
+
+   I[1]: (1047, 30, 1, 45)/int8, min/max=[-128, 127], mean/std=[-34.043733, 57.108590]
+
+   O[1]: (1047, 1, 1, 5)/int8, min/max=[-51, -38], mean/std=[-48.400000, 5.200000]
+
+Creating c (debug) info json file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_output/network_c_info_valid.json
+
+Copying the AI runtime files to the user workspace: /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_ws/inspector_network/workspace
+ from: /Applications/ST/STEdgeAI/4.0/Utilities/macarm/targets/common/EmbedNets/tools/inspector/workspace
+
+ Exec/report summary (validate)
+ -------------------------------------------------------------------------------------------------------------------------------------------
+ model file         :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v5_int8.tflite        
+ type               :   tflite                                                                                                              
+ c_name             :   network                                                                                                             
+ compression        :   lossless                                                                                                            
+ options            :   allocate-inputs, allocate-outputs, multi-heaps, use-lite-runtime, use-st-ai                                         
+ optimization       :   balanced                                                                                                            
+ target/series      :   stm32u5                                                                                                             
+ memory pool        :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/mempools.json             
+ workspace dir      :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_ws                  
+ output dir         :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_output              
+ vinput files       :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v5.npz   
+ model_fmt          :   ss/sa per channel                                                                                                   
+ model_name         :   kws_v5_int8                                                                                                         
+ model_hash         :   0x64a5c568febc4e7ea000a6b8824e249c                                                                                  
+ params #           :   42,293 items (41.74 KiB)                                                                                            
+ -------------------------------------------------------------------------------------------------------------------------------------------
+ input 1/1          :   'serving_default_input_layer0', int8(1x30x45), 1.32 KBytes, QLinear(0.017803887,-35,int8), activations              
+ output 1/1         :   'gemm_9', int8(1x5), 5 Bytes, QLinear(0.076813042,-51,int8), activations                                            
+ macc               :   3,839,765                                                                                                           
+ weights (ro)       :   42,740 B (41.74 KiB) (1 segment) / -126,432(-74.7%) vs float model                                                  
+ activations (rw)   :   16,880 B (16.48 KiB) (1 segment) *                                                                                  
+ ram (total)        :   16,880 B (16.48 KiB) = 16,880 + 0 + 0                                                                               
+ -------------------------------------------------------------------------------------------------------------------------------------------
+ (*) 'input'/'output' buffers are allocated in the activations buffer
+  Memory-pools summary (activations/ domain)
+  --------------- ---- ------------------------ --------- 
+  name            id   used                     buffer#   
+  --------------- ---- ------------------------ --------- 
+  RAM             0    16.48 KiB (2.1%)         13        
+  weights_array   1    41.74 KiB (4274000.0%)   8         
+  --------------- ---- ------------------------ ---------
+
+Running the TFlite model...
+
+INFO: 
+Created TensorFlow Lite XNNPACK delegate for CPU.
+
+Running the ST.AI c-model (AI RUNNER)...(name=network, mode=HOST)
+
+ DLL Driver v2.0 - Direct Python binding (/Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_ws/inspector_network/workspace/lib/libai_network.dylib) ['network']
+
+  Summary 'network' - ['network']
+  ----------------------------------------------------------------------------------------------------------
+
+  I[1/1] 'input_1'    :   int8[1,30,45], 1350 Bytes, QLinear(0.017803887,-35,int8), in activations buffer
+  O[1/1] 'output_1'   :   int8[1,5], 5 Bytes, QLinear(0.076813042,-51,int8), in activations buffer
+  n_nodes             :   6
+  activations         :   16880
+  weights             :   42740
+  macc                :   3839765
+  hash                :   0x64a5c568febc4e7ea000a6b8824e249c
+
+  compile_datetime    :   Sep 16 2026 14:45:05
+  ----------------------------------------------------------------------------------------------------------
+  protocol            :   DLL Driver v2.0 - Direct Python binding
+  tools               :   ST.AI (st-ai api) v4.0.1
+
+  runtime lib         :   v12.0.1
+  capabilities        :   IO_ONLY, PER_LAYER, PER_LAYER_WITH_DATA
+  device.desc         :   arm64, arm, Darwin
+
+  ----------------------------------------------------------------------------------------------------------
+
+ NOTE: The duration and execution time per layer are just indications. They depend on the host machine's workload.
+
+  ST.AI Profiling results v2.0 - "network"
+
+  ------------------------------------------------------------
+  nb sample(s)   :   1047
+  duration       :   1.443 ms by sample (1.302/1.782/0.102)
+  macc           :   3839765
+  ------------------------------------------------------------
+
+  Statistic per tensor
+  -------------------------------------------------------------------------------
+
+  tensor   #      type[shape]:size      min   max      mean      std  name
+  -------------------------------------------------------------------------------
+  I.0      1047   i8[1,30,45]:1350     -128   127   -34.044   57.109  input_1
+  O.0      1047   i8[1,5]:5            -128   127   -28.805   45.468  output_1
+  -------------------------------------------------------------------------------
+
+Saving validation data...
+ output directory: /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_output
+
+ creating /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_output/network_val_io.npz
+
+ m_outputs_1: (1047, 5)/int8, min/max=[-128, 127], mean/std=[-28.805158, 45.468066], gemm_9
+
+ c_outputs_1: (1047, 1, 1, 5)/int8, min/max=[-128, 127], mean/std=[-28.804776, 45.467548], scale=0.076813042 zp=-51, gemm_9
+
+Computing the metrics...
+
+ Accuracy report #1 for the generated HOST C-model
+ ----------------------------------------------------------------------------------------------------
+ notes: - r/int8 data are dequantized with s=0.07681304216384888 zp=-51
+        - p/int8 data are dequantized with s=0.07681304216384888 zp=-51
+        - computed against the provided ground truth values
+        - 1047 samples (5 items per sample)
+  acc=92.17% rmse=3.536559343 mae=2.530017614 l2r=0.909980893 mean=-1.505169 std=3.200574 snr=-17.973753 nse=-77.379407 cos=0.805603
+
+  Confusion matrix (axis=-1) - 5 classes (1047 samples)
+  ---------------------------------
+  C0       132   1    1    3   19
+  C1        1   169   2    1   12
+  C2        2    2   346   3   17
+  C3        .    .    .   153   1
+
+  C4        9    3    4    1   165
+
+ Accuracy report #1 for the reference model
+ ----------------------------------------------------------------------------------------------------
+
+ notes: - r/int8 data are dequantized with s=0.07681304216384888 zp=-51
+
+        - p/int8 data are dequantized with s=0.07681304216384888 zp=-51
+        - computed against the provided ground truth values
+
+        - 1047 samples (5 items per sample)
+  acc=92.17% rmse=3.536584616 mae=2.530047178 l2r=0.909982085 mean=-1.505139 std=3.200616 snr=-17.973815 nse=-77.380524 cos=0.805598
+
+  Confusion matrix (axis=-1) - 5 classes (1047 samples)
+  ---------------------------------
+
+  C0       132   1    1    3   19
+  C1        1   169   2    1   12
+
+  C2        2    2   346   3   17
+  C3        .    .    .   153   1
+
+  C4        9    3    4    1   165
+
+ Cross accuracy report #1 (reference vs C-model)
+
+ ----------------------------------------------------------------------------------------------------
+ notes: - r/int8 data are dequantized with s=0.07681304216384888 zp=-51
+        - p/int8 data are dequantized with s=0.07681304216384888 zp=-51
+
+        - ACC metric is not computed ("--classifier" option can be used to force it)
+        - the output of the reference model is used as ground truth/reference value
+        - 1047 samples (5 items per sample)
+
+  acc=n.a. rmse=0.002123279 mae=0.000058692 l2r=0.000546334 mean=-0.000029 std=0.002123 snr=65.250883 nse=1.000000 cos=1.000000
+
+ Evaluation report (summary)
+
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Output              acc      rmse          mae           l2r           mean        std        snr          nse          cos        tensor
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ HOST c-model #1     92.17%   3.536559343   2.530017614   0.909980893   -1.505169   3.200574   -17.973753   -77.379407   0.805603   'gemm_9', 1047 x int8(1x5), m_id=[9]
+ original model #1   92.17%   3.536584616   2.530047178   0.909982085   -1.505139   3.200616   -17.973815   -77.380524   0.805598   'gemm_9', 1047 x int8(1x5), m_id=[9]
+ X-cross #1          n.a.     0.002123279   0.000058692   0.000546334   -0.000029   0.002123   65.250883    1.000000     1.000000   'gemm_9', 1047 x int8(1x5), m_id=[9]
+ --------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  acc  : Accuracy (class, axis=-1)
+  rmse : Root Mean Squared Error
+  mae  : Mean Absolute Error
+  l2r  : L2 relative error
+  mean : Mean error
+  std  : Standard deviation error
+  snr  : Signal-to-Noise Ratio (SNR), bigger is better
+  nse  : Nash-Sutcliffe efficiency criteria, bigger is better, best=1, range=(-inf, 1]
+  cos  : COsine Similarity, bigger is better, best=1, range=(0, 1]
+
+Creating txt report file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-5/.ai/st_ai_output/network_validate_report.txt
+
+elapsed time (VALIDATE): 16.390s
+

@@ -1,0 +1,26 @@
+{
+  "args": {
+    "model": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/checkpoints/kws_v3/best.keras",
+    "valinput": "",
+    "valoutput": "",
+    "batch-size": 10,
+    "mode": "host",
+    "optimization": "balanced",
+    "name": "network",
+    "verbosity": 1,
+    "c-api": "st-ai"
+  },
+  "mempools": [
+    {
+      "name": "RAM",
+      "size": 786432,
+      "offset": 536870912,
+      "driver": "RAM",
+      "max": 786432,
+      "mode_available": []
+    }
+  ],
+  "exportWeightsAsBin": false,
+  "copyWeightsToRam": false,
+  "automaticFlash": true
+}

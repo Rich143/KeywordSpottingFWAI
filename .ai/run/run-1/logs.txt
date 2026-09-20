@@ -1,0 +1,199 @@
+>>> /Applications/ST/STEdgeAI/4.0/Utilities/macarm/stedgeai validate --model /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/checkpoints/kws_v3/best.keras --batch-size 10 --mode host --optimization balanced --name network --verbosity 1 --c-api st-ai --target stm32u5 --memory-pool /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/mempools.json --save-csv --workspace /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_ws --output /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_output
+ST Edge AI Core v4.0.1-20581 7ed50de05
+
+Setting validation data...
+
+ generating random data, size=10, seed=42, range=(0, 1)
+
+   I[1]: (10, 30, 1, 45)/float32, min/max=[0.000012, 0.999718], mean/std=[0.496046, 0.288407]
+
+ no output/reference samples are provided
+
+Creating c (debug) info json file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_output/network_c_info_valid.json
+
+Copying the AI runtime files to the user workspace: /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_ws/inspector_network/workspace
+ from: /Applications/ST/STEdgeAI/4.0/Utilities/macarm/targets/common/EmbedNets/tools/inspector/workspace
+
+ Exec/report summary (validate)
+ -----------------------------------------------------------------------------------------------------------------------------------
+ model file         :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/checkpoints/kws_v3/best.keras   
+ type               :   keras                                                                                                       
+ c_name             :   network                                                                                                     
+ compression        :   lossless                                                                                                    
+ options            :   allocate-inputs, allocate-outputs, multi-heaps, use-lite-runtime, use-st-ai                                 
+ optimization       :   balanced                                                                                                    
+ target/series      :   stm32u5                                                                                                     
+ memory pool        :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/mempools.json     
+ workspace dir      :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_ws          
+ output dir         :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_output      
+ model_fmt          :   float                                                                                                       
+ model_name         :   best                                                                                                        
+ model_hash         :   0x221b8bc9f1ad3b7229dcdcb360204025                                                                          
+ params #           :   178,229 items (696.21 KiB)                                                                                  
+ -----------------------------------------------------------------------------------------------------------------------------------
+ input 1/1          :   'input_0', f32(1x30x45), 5.27 KBytes, activations                                                           
+ output 1/1         :   'dense_1', f32(1x5), 20 Bytes, activations                                                                  
+ macc               :   884,933                                                                                                     
+ weights (ro)       :   712,724 B (696.02 KiB) (1 segment) / -192(-0.0%) vs float model                                             
+ activations (rw)   :   264,636 B (258.43 KiB) (1 segment) *                                                                        
+ ram (total)        :   264,636 B (258.43 KiB) = 264,636 + 0 + 0                                                                    
+ -----------------------------------------------------------------------------------------------------------------------------------
+ (*) 'input'/'output' buffers are allocated in the activations buffer
+  Memory-pools summary (activations/ domain)
+  --------------- ---- -------------------------- --------- 
+  name            id   used                       buffer#   
+  --------------- ---- -------------------------- --------- 
+  RAM             0    258.43 KiB (33.7%)         8         
+  weights_array   1    696.02 KiB (71272400.0%)   6         
+  --------------- ---- -------------------------- ---------
+
+Running the Keras model...
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 70ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 76ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 21ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 21ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 14ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 20ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 21ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 21ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 20ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 20ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 20ms/step
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 15ms/step
+
+
+[1m1/1[0m [32m====================[0m[37m[0m [1m0s[0m 20ms/step
+
+Running the ST.AI c-model (AI RUNNER)...(name=network, mode=HOST)
+
+ DLL Driver v2.0 - Direct Python binding (/Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_ws/inspector_network/workspace/lib/libai_network.dylib) ['network']
+
+  Summary 'network' - ['network']
+  --------------------------------------------------------------------------
+  I[1/1] 'input_1'    :   f32[1,30,45], 5400 Bytes, in activations buffer
+
+  O[1/1] 'output_1'   :   f32[1,5], 20 Bytes, in activations buffer
+  n_nodes             :   6
+  activations         :   264636
+
+  weights             :   712724
+  macc                :   884933
+  hash                :   0x221b8bc9f1ad3b7229dcdcb360204025
+
+  compile_datetime    :   Sep  9 2026 11:11:31
+  --------------------------------------------------------------------------
+
+  protocol            :   DLL Driver v2.0 - Direct Python binding
+  tools               :   ST.AI (st-ai api) v4.0.1
+
+  runtime lib         :   v12.0.1
+  capabilities        :   IO_ONLY, PER_LAYER, PER_LAYER_WITH_DATA
+
+  device.desc         :   arm64, arm, Darwin
+  --------------------------------------------------------------------------
+
+ NOTE: The duration and execution time per layer are just indications. They depend on the host machine's workload.
+
+  ST.AI Profiling results v2.0 - "network"
+
+  ------------------------------------------------------------
+  nb sample(s)   :   10
+  duration       :   0.573 ms by sample (0.562/0.607/0.013)
+  macc           :   884933
+  ------------------------------------------------------------
+
+  Statistic per tensor
+
+  ---------------------------------------------------------------------------------
+
+  tensor   #    type[shape]:size         min     max     mean      std  name
+  ---------------------------------------------------------------------------------
+
+  I.0      10   f32[1,30,45]:5400      0.000   1.000    0.496    0.288  input_1
+  O.0      10   f32[1,5]:20           -6.552   2.203   -2.076    3.019  output_1
+  ---------------------------------------------------------------------------------
+
+Saving validation data...
+
+ output directory: /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_output
+
+ creating /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_output/network_val_io.npz
+
+ m_outputs_1: (10, 5)/float32, min/max=[-6.552160, 2.203402], mean/std=[-2.076473, 3.019438], dense_1
+
+ c_outputs_1: (10, 1, 1, 5)/float32, min/max=[-6.552162, 2.203402], mean/std=[-2.076473, 3.019438], dense_1
+
+Computing the metrics...
+
+ Cross accuracy report #1 (reference vs C-model)
+
+ ----------------------------------------------------------------------------------------------------
+ notes: - ACC metric is not computed ("--classifier" option can be used to force it)
+        - the output of the reference model is used as ground truth/reference value
+
+        - 10 samples (5 items per sample)
+
+  acc=n.a. rmse=0.000006212 mae=0.000005078 l2r=0.000001695 mean=0.000000 std=0.000006 snr=115.415897 nse=1.000000 cos=1.000000
+
+ Evaluation report (summary)
+
+ ------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Output       acc    rmse          mae           l2r           mean       std        snr          nse        cos        tensor
+ ------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+ X-cross #1   n.a.   0.000006212   0.000005078   0.000001695   0.000000   0.000006   115.415897   1.000000   1.000000   'dense_1', 10 x f32(1x5), m_id=[7]
+ ------------------------------------------------------------------------------------------------------------------------------------------------------------
+  acc  : Accuracy (class, axis=-1)
+
+  rmse : Root Mean Squared Error
+  mae  : Mean Absolute Error
+  l2r  : L2 relative error
+
+  mean : Mean error
+  std  : Standard deviation error
+
+  snr  : Signal-to-Noise Ratio (SNR), bigger is better
+
+  nse  : Nash-Sutcliffe efficiency criteria, bigger is better, best=1, range=(-inf, 1]
+
+  cos  : COsine Similarity, bigger is better, best=1, range=(0, 1]
+
+Creating txt report file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-1/.ai/st_ai_output/network_validate_report.txt
+
+elapsed time (VALIDATE): 39.725s
+

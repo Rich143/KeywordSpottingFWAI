@@ -1,0 +1,16 @@
+Studies
+
+Study 1
+    initial_lr = trial.suggest_float('initial_lr', 1e-4, 1e-2, log=True)
+    alpha = trial.suggest_float('alpha', 0.001, 0.1, log=True)
+    conv_filters = trial.suggest_categorical('conv_filters', [16, 24, 32, 48, 64])
+    dense_units = trial.suggest_categorical('dense_units', [8, 16, 32, 64])
+
+Study 2
+    initial_lr = trial.suggest_float('initial_lr', 1e-4, 3e-3, log=True)
+    alpha = trial.suggest_float('alpha', 0.001, 0.1, log=True)
+    conv_filters = trial.suggest_categorical('conv_filters', [16, 24, 32, 48, 64])
+    dense_units = trial.suggest_categorical('dense_units', [8, 16, 32, 48, 64])
+    max_pool_size = (2, 2)
+    if dense_units > 32:
+        max_pool_size = (4, 4)

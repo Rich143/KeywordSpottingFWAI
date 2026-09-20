@@ -1,0 +1,24 @@
+>>> /Applications/ST/STEdgeAI/4.0/Utilities/macarm/stedgeai validate --model /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v5_int8.tflite --valinput /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v5.npz --mode host --optimization balanced --name network --verbosity 1 --c-api st-ai --target stm32u5 --memory-pool /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-4/.ai/mempools.json --save-csv --workspace /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-4/.ai/st_ai_ws --output /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-4/.ai/st_ai_output
+ST Edge AI Core v4.0.1-20581 7ed50de05
+
+Setting validation data...
+
+ loading file: /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v5.npz
+
+  available entries: ['x_test', 'y_test'] selector="None"
+
+  selected entries: x_test/y_test
+
+   samples are reshaped: (1047, 30, 45) -> (1047, 30, 1, 45)
+
+E204(ValParamError): incompatible data shape: (1047,), expected (-1, 1, 1, 5)
+
+Run failed: Error: validate error: E204(ValParamError): incompatible data shape: (1047,), expected (-1, 1, 1, 5. Please check the report for more details. Output: ST Edge AI Core v4.0.1-20581 7ed50de05
+PASS:   0%|          | 0/187 [00:00<?, ?it/s]                                                       Setting validation data...
+ loading file: /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v5.npz
+                                                         available entries: ['x_test', 'y_test'] selector="None"
+  selected entries: x_test/y_test
+                                                          samples are reshaped: (1047, 30, 45) -> (1047, 30, 1, 45)
+                                                       
+E204(ValParamError): incompatible data shape: (1047,), expected (-1, 1, 1, 5)
+ 

@@ -1,0 +1,29 @@
+{
+  "args": {
+    "model": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/checkpoints/kws_v3/best.keras",
+    "valinput": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/mydata.npz",
+    "valoutput": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/mydata.npz",
+    "mode": "host",
+    "input-data-type": "float32",
+    "output-data-type": "float32",
+    "optimization": "balanced",
+    "name": "network",
+    "verbosity": 1,
+    "c-api": "st-ai",
+    "target": "stm32u5",
+    "memory-pool": "/Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-2/.ai/mempools.json"
+  },
+  "mempools": [
+    {
+      "name": "RAM",
+      "size": 786432,
+      "offset": 536870912,
+      "driver": "RAM",
+      "max": 786432,
+      "mode_available": []
+    }
+  ],
+  "exportWeightsAsBin": false,
+  "copyWeightsToRam": false,
+  "automaticFlash": true
+}

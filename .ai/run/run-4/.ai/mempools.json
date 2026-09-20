@@ -1,0 +1,13 @@
+{
+  "version": "1.0",
+  "memory": {
+    "mempools": [
+      {
+        "name": "RAM",
+        "usable_size": "786432B",
+        "size": "786432B",
+        "address": "0x20000000"
+      }
+    ]
+  }
+}

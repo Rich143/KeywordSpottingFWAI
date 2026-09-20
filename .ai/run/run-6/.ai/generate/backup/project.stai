@@ -1,0 +1,22 @@
+{
+  "toolchain": "CMake",
+  "variant": "Validation",
+  "fromMx": false,
+  "isGenerated": false,
+  "name": "run-6",
+  "createdAt": 1788966489746,
+  "lastModified": 1789914426757,
+  "lastAccessed": 1789914426756,
+  "path": "/Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI",
+  "board": "B-U585I-IOT02A",
+  "mcu": "STM32U585AII6Q",
+  "type": "BYOM",
+  "context": "CortexM33",
+  "contextProject": "TrustZoneDisabled",
+  "lastGenerationRunId": "run-1",
+  "uartInstance": {
+    "usart": "USART1",
+    "rxpin": "PA10",
+    "txpin": "PA9"
+  }
+}

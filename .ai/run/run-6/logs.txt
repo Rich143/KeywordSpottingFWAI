@@ -1,0 +1,1135 @@
+Generate Project
+Copying previous project files from /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6 to /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/generate/backup
+Downloading board template for CMake/B-U585I-IOT02A...
+Board template for CMake/B-U585I-IOT02A downloaded successfully.
+Calculating memory footprint...
+Adjusting memory area RAM for pool RAM perfect match of 786432 bytes
+Copy external flasher file for STM32CubeProgrammer
+Generating code...
+>>> /Applications/ST/STEdgeAI/4.0/Utilities/macarm/stedgeai generate --model /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v7_int8_softmax.tflite --valinput /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz --mode target --optimization balanced --name network --verbosity 1 --c-api st-ai --target stm32u5 --workspace /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_ws --output /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output --memory-pool /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/mempools.json
+ST Edge AI Core v4.0.1-20581 7ed50de05
+
+Creating c (debug) info json file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_c_info.json
+
+ Exec/report summary (generate)
+ ----------------------------------------------------------------------------------------------------------------------------------------------
+ model file         :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v7_int8_softmax.tflite   
+ type               :   tflite                                                                                                                 
+ c_name             :   network                                                                                                                
+ compression        :   lossless                                                                                                               
+ options            :   allocate-inputs, allocate-outputs, multi-heaps, use-lite-runtime, use-st-ai                                            
+ optimization       :   balanced                                                                                                               
+ target/series      :   stm32u5                                                                                                                
+ memory pool        :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/mempools.json                
+ workspace dir      :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_ws                     
+ output dir         :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output                 
+ vinput files       :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz      
+ model_fmt          :   ss/sa per channel                                                                                                      
+ model_name         :   kws_v7_int8_softmax                                                                                                    
+ model_hash         :   0x9c5531a1eda88feae352d7c1ad53c132                                                                                     
+ params #           :   8,973 items (8.96 KiB)                                                                                                 
+ ----------------------------------------------------------------------------------------------------------------------------------------------
+ input 1/1          :   'serving_default_ke..ensor_1050', int8(1x30x45), 1.32 KBytes, QLinear(0.017803887,-35,int8), activations               
+ output 1/1         :   'nl_10', int8(1x5), 5 Bytes, QLinear(0.003906250,-128,int8), activations                                               
+ macc               :   423,544                                                                                                                
+ weights (ro)       :   9,180 B (8.96 KiB) (1 segment) / -26,712(-74.4%) vs float model                                                        
+ activations (rw)   :   7,736 B (7.55 KiB) (1 segment) *                                                                                       
+ ram (total)        :   7,736 B (7.55 KiB) = 7,736 + 0 + 0                                                                                     
+ ----------------------------------------------------------------------------------------------------------------------------------------------
+ (*) 'input'/'output' buffers are allocated in the activations buffer
+  Memory-pools summary (activations/ domain)
+  --------------- ---- ---------------------- --------- 
+  name            id   used                   buffer#   
+  --------------- ---- ---------------------- --------- 
+  RAM             0    7.55 KiB (1.0%)        13        
+  weights_array   1    8.96 KiB (918000.0%)   8         
+  --------------- ---- ---------------------- ---------
+
+Computing AI RT data/code size (target=stm32u5)..
+
+ Requested memory size by section - "stm32u5" target
+ ------------------------------- -------- -------- ------- -------
+
+ module                              text   rodata    data     bss
+ ------------------------------- -------- -------- ------- -------
+ NetworkRuntime1201_CM33_GCC.a     18,532        0       0       0
+
+ network.o                          1,394      508   1,740      64
+ lib (toolchain)*                       0        0       0       0
+
+ ------------------------------- -------- -------- ------- -------
+
+ RT total**                        19,926      508   1,740      64
+ ------------------------------- -------- -------- ------- -------
+
+ weights                                0    9,184       0       0
+ activations                            0        0       0   7,736
+ states                                 0        0       0       0
+
+ io                                     0        0       0       0
+ ------------------------------- -------- -------- ------- -------
+ TOTAL                             19,926    9,692   1,740   7,800
+
+ ------------------------------- -------- -------- ------- -------
+ *  toolchain objects (libm/libgcc*)
+ ** RT AI runtime objects (kernels+infrastructure)
+
+  Summary - "stm32u5" target
+  ---------------------------------------------------
+
+               FLASH (ro)      %*   RAM (rw)       %
+  ---------------------------------------------------
+  RT total         22,174   70.7%      1,804   18.9%
+  ---------------------------------------------------
+  TOTAL            31,358              9,540
+  ---------------------------------------------------
+
+  *  rt/total
+ Generated files (5)
+ --------------------------------------------------------------------------------------------------------------------------
+
+ /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_data.h
+ /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_data.c
+ /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network.h
+
+ /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network.c
+ /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_details.h
+
+Creating txt report file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_generate_report.txt
+
+elapsed time (GENERATE): 7.118s
+
+Compiling template bsp_ai.h.hbs...
+Compiling template app_config.h.hbs...
+Compiling template user_init.h.hbs...
+Compiling template user_init.c.hbs...
+Compiling template app_x-cube-ai.h.hbs...
+Compiling template app_x-cube-ai.c.hbs...
+Compiling template weights.h.hbs...
+Compiling template weights.c.hbs...
+Removing static from USART Init in main.c
+Adding include line #include "app_x-cube-ai.h" to main.c
+Adding init function call STM32CubeAI_Studio_AI_Init(); to main.c
+Adding process function call STM32CubeAI_Studio_AI_Process(); to main.c
+Generate project done
+-- The C compiler identification is GNU 14.3.1
+
+-- The CXX compiler identification is GNU 14.3.1
+
+-- Detecting C compiler ABI info
+
+-- Detecting C compiler ABI info - done
+
+-- Check for working C compiler: /Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.macosaarch64_1.0.0.202602081740/tools/bin/arm-none-eabi-gcc - skipped
+
+-- Detecting C compile features
+
+-- Detecting C compile features - done
+
+-- Detecting CXX compiler ABI info
+
+-- Detecting CXX compiler ABI info - done
+
+-- Check for working CXX compiler: /Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.macosaarch64_1.0.0.202602081740/tools/bin/arm-none-eabi-g++ - skipped
+
+-- Detecting CXX compile features
+
+-- Detecting CXX compile features - done
+
+Build type: Release
+
+-- The ASM compiler identification is GNU
+
+-- Found assembler: /Applications/STM32CubeIDE.app/Contents/Eclipse/plugins/com.st.stm32cube.ide.mcu.externaltools.gnu-tools-for-stm32.14.3.rel1.macosaarch64_1.0.0.202602081740/tools/bin/arm-none-eabi-gcc
+
+-- Configuring done (0.5s)
+
+-- Generating done (0.0s)
+
+-- Build files have been written to: /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/build/Release
+
+[36m[01m      -------------------------------------------------------------------
+[39;49m[0m
+[36m[01m                        STM32CubeProgrammer v2.23.0                  
+[39;49m[0m[36m[01m      -------------------------------------------------------------------
+
+[39;49m[0m
+[39;49m[0m
+[90mST-LINK SN  : 005000293432511530343838
+[39;49m[0m[90mST-LINK FW  : V3J15M7
+[39;49m[0m
+[90mBoard       : B-U585I-IOT02A
+[39;49m[0m
+[90mVoltage     : 3.29V
+[39;49m[0m
+[90mSWD freq    : 8000 KHz
+[39;49m[0m[90mConnect mode: Under Reset
+[39;49m[0m
+[90mReset mode  : Hardware reset
+[39;49m[0m
+[90mDevice ID   : 0x482
+[39;49m[0m
+[90mRevision ID : Rev W
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49mDevice name : STM32U575/STM32U585
+[39;49m[0m
+[39;49mNVM size    : 2 MBytes
+[39;49m[0m
+[39;49mDevice type : MCU
+[39;49m[0m[39;49mDevice CPU  : Cortex-M33
+[39;49m[0m
+[39;49mBL Version  : 0x93
+[39;49m[0m
+[39;49mDebug in Low Power mode enabled
+[39;49m[0m
+[39;49m
+[39;49m[0m
+[36m[01m      -------------------------------------------------------------------
+[39;49m[0m
+[36m[01m        Choose flashing speed for Cortex M33 series.(default speed=Reliable)                  
+[39;49m[0m[36m[01m      -------------------------------------------------------------------
+
+[39;49m[0m
+[39;49m
+
+[39;49m[0m
+[39;49mOpening and parsing file: B-U585I-IOT02A.elf
+[39;49m[0m[39;49m
+
+[39;49m[0m[39;49mMemory Programming ...
+[39;49m[0m[39;49m  File          : B-U585I-IOT02A.elf
+[39;49m[0m
+[39;49m  Size          : 88.99 KB 
+[39;49m[0m
+[39;49m  Address       : 0x08000000
+[39;49m[0m[39;49m
+
+[39;49m[0m
+[39;49m[0m[39;49mErasing memory corresponding to segment 0:
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49mErasing internal memory sector 0
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49mErasing memory corresponding to segment 1:
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49mErasing internal memory sectors [8 19]
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49mDownload in Progress:
+[39;49m[0m[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[00;32m[==================================================] 100% [39;49m
+[39;49m[0m[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m[39;49m[0m
+[39;49m[0m[39;49m
+
+[39;49m[0m
+[00;32mFile download complete
+[39;49m[0m[39;49mTime elapsed during download operation: 00:00:01.242
+[39;49m[0m
+[39;49m
+RUNNING Program ... 
+[39;49m[0m
+[39;49m  Address:      : 0x8000000
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+[39;49m[0m
+Application is running, Please Hold on...
+[39;49m[0m
+[00;32mStart operation achieved successfully
+[39;49m[0m
+[39;49m[0m
+Flashing completed
+Device is ready on port /dev/tty.usbmodem2121303
+>>> /Applications/ST/STEdgeAI/4.0/Utilities/macarm/stedgeai validate --model /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v7_int8_softmax.tflite --valinput /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz --mode target --optimization balanced --name network --verbosity 1 --c-api st-ai --target stm32u5 --workspace /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_ws --output /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output --memory-pool /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/mempools.json --desc serial:/dev/tty.usbmodem2121303:115200 --save-csv
+ST Edge AI Core v4.0.1-20581 7ed50de05
+
+Setting validation data...
+
+ loading file: /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz
+
+  available entries: ['x_test', 'y_test'] selector="None"
+
+  selected entries: x_test/y_test
+
+   samples are reshaped: (1047, 30, 45) -> (1047, 30, 1, 45)
+
+   samples are reshaped: (1047, 5) -> (1047, 1, 1, 5)
+
+   I[1]: (1047, 30, 1, 45)/int8, min/max=[-128, 127], mean/std=[-34.043733, 57.108590]
+
+   O[1]: (1047, 1, 1, 5)/int8, min/max=[-128, 127], mean/std=[-77.000000, 102.000000]
+
+Creating c (debug) info json file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_c_info_valid.json
+
+ Exec/report summary (validate)
+ ----------------------------------------------------------------------------------------------------------------------------------------------
+ model file         :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v7_int8_softmax.tflite   
+ type               :   tflite                                                                                                                 
+ c_name             :   network                                                                                                                
+ compression        :   lossless                                                                                                               
+ options            :   allocate-inputs, allocate-outputs, multi-heaps, use-lite-runtime, use-st-ai                                            
+ optimization       :   balanced                                                                                                               
+ target/series      :   stm32u5                                                                                                                
+ memory pool        :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/mempools.json                
+ workspace dir      :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_ws                     
+ output dir         :   /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output                 
+ vinput files       :   /Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz      
+ model_fmt          :   ss/sa per channel                                                                                                      
+ model_name         :   kws_v7_int8_softmax                                                                                                    
+ model_hash         :   0x9c5531a1eda88feae352d7c1ad53c132                                                                                     
+ params #           :   8,973 items (8.96 KiB)                                                                                                 
+ ----------------------------------------------------------------------------------------------------------------------------------------------
+ input 1/1          :   'serving_default_ke..ensor_1050', int8(1x30x45), 1.32 KBytes, QLinear(0.017803887,-35,int8), activations               
+ output 1/1         :   'nl_10', int8(1x5), 5 Bytes, QLinear(0.003906250,-128,int8), activations                                               
+ macc               :   423,544                                                                                                                
+ weights (ro)       :   9,180 B (8.96 KiB) (1 segment) / -26,712(-74.4%) vs float model                                                        
+ activations (rw)   :   7,736 B (7.55 KiB) (1 segment) *                                                                                       
+ ram (total)        :   7,736 B (7.55 KiB) = 7,736 + 0 + 0                                                                                     
+ ----------------------------------------------------------------------------------------------------------------------------------------------
+ (*) 'input'/'output' buffers are allocated in the activations buffer
+  Memory-pools summary (activations/ domain)
+  --------------- ---- ---------------------- --------- 
+  name            id   used                   buffer#   
+  --------------- ---- ---------------------- --------- 
+  RAM             0    7.55 KiB (1.0%)        13        
+  weights_array   1    8.96 KiB (918000.0%)   8         
+  --------------- ---- ---------------------- ---------
+
+Running the TFlite model...
+
+INFO: 
+Created TensorFlow Lite XNNPACK delegate for CPU.
+
+Running the ST.AI c-model (AI RUNNER)...(name=network, mode=TARGET)
+
+ Proto-buffer driver v2.1 (msg v3.2) (Serial driver v1.0 - /dev/tty.usbmodem2121303:115200) ['network']
+
+  Summary 'network' - ['network']
+
+  ---------------------------------------------------------------------------------------------------------------------
+  I[1/1] 'input_1'    :   int8[1,30,45], 1350 Bytes, QLinear(0.017803887,-35,int8), activations
+  O[1/1] 'output_1'   :   int8[1,5], 5 Bytes, QLinear(0.003906250,-128,int8), activations
+  n_nodes             :   5
+
+  activations         :   7736
+  weights             :   9180
+  macc                :   423544
+
+  hash                :   0x9c5531a1eda88feae352d7c1ad53c132
+  compile_datetime    :   Sep 20 2026 10:27:29
+
+  ---------------------------------------------------------------------------------------------------------------------
+  protocol            :   Proto-buffer driver v2.1 (msg v3.2) (Serial driver v1.0 - /dev/tty.usbmodem2121303:115200)
+
+  tools               :   ST.AI (st-ai api) v4.0.1
+  runtime lib         :   v12.0.1-92efada9 compiled with GCC 13.3.1 (GCC)
+  capabilities        :   IO_ONLY, PER_LAYER, PER_LAYER_WITH_DATA
+
+  device.desc         :   stm32 family - 0x482 - STM32U575/585 @160/160MHz
+  device.attrs        :   fpu,icache
+  ---------------------------------------------------------------------------------------------------------------------
+
+  ST.AI Profiling results v2.0 - "network"
+
+  -------------------------------------------------------------------------------
+  nb sample(s)                   :   1047
+  duration                       :   10.091 ms by sample (10.090/10.091/0.000)
+  macc                           :   423544
+  cycles/MACC                    :   3.81
+  CPU cycles                     :   [1,614,512]
+  network initialize time (ms)   :   0.003
+  -------------------------------------------------------------------------------
+   Inference time per node
+   ---------------------------------------------------------------------------------------------------------------------
+
+   c_id    m_id   type                                         dur (ms)        %     cumul  CPU cycles      name
+   ---------------------------------------------------------------------------------------------------------------------
+   0       5      Conv2dPool (0x109) - Conv2D                     7.108   70.45%    70.45%  [ 1,137,347 ]   ai_node_0
+
+   1       6      Conv2D (0x103) - Conv2D                         1.667   16.52%    86.97%  [   266,720 ]   ai_node_1
+
+   2       8      Conv2dPool (0x109) - Conv2D                     1.291   12.79%    99.76%  [   206,527 ]   ai_node_2
+   3       9      Dense (0x104) - Dense                           0.010    0.10%    99.85%  [     1,570 ]   ai_node_3
+
+   4       10     Softmax (0x10c) - Nonlinearity (softmax)        0.015    0.15%   100.00%  [     2,348 ]   ai_node_4
+   ---------------------------------------------------------------------------------------------------------------------
+
+   total                                                         10.091                     [ 1,614,512 ]
+   ---------------------------------------------------------------------------------------------------------------------
+
+   Statistic per tensor
+   -------------------------------------------------------------------------------
+   tensor   #      type[shape]:size      min   max      mean      std  name
+
+   -------------------------------------------------------------------------------
+   I.0      1047   i8[1,30,45]:1350     -128   127   -34.044   57.109  input_1
+   O.0      1047   i8[1,5]:5            -128   127   -76.826   85.038  output_1
+   -------------------------------------------------------------------------------
+
+Saving validation data...
+
+ output directory: /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output
+
+ creating /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_val_io.npz
+
+ m_outputs_1: (1047, 5)/int8, min/max=[-128, 127], mean/std=[-76.824069, 85.038420], nl_10
+
+ c_outputs_1: (1047, 1, 1, 5)/int8, min/max=[-128, 127], mean/std=[-76.826361, 85.038362], scale=0.003906250 zp=-128, nl_10
+
+Computing the metrics...
+
+ Accuracy report #1 for the generated TARGET C-model
+
+ ----------------------------------------------------------------------------------------------------
+ notes: - r/int8 data are dequantized with s=0.00390625 zp=-128
+
+        - p/int8 data are dequantized with s=0.00390625 zp=-128
+
+        - computed against the provided ground truth values
+        - 1047 samples (5 items per sample)
+
+  acc=88.44% rmse=0.180086017 mae=0.081562646 l2r=0.464511007 mean=-0.000678 std=0.180102 snr=7.866704 nse=0.795753 cos=0.915772
+
+  Confusion matrix (axis=-1) - 5 classes (1047 samples)
+
+  ---------------------------------
+
+  C0       131   2    6    6   11
+  C1        3   159   4    2   17
+
+  C2        1    3   351   8    7
+  C3        .    .    2   152   .
+
+  C4       22    6   17    4   133
+
+ Accuracy report #1 for the reference model
+
+ ----------------------------------------------------------------------------------------------------
+ notes: - r/int8 data are dequantized with s=0.00390625 zp=-128
+        - p/int8 data are dequantized with s=0.00390625 zp=-128
+
+        - computed against the provided ground truth values
+        - 1047 samples (5 items per sample)
+
+  acc=88.44% rmse=0.180083990 mae=0.081567124 l2r=0.464500010 mean=-0.000687 std=0.180100 snr=7.866802 nse=0.795757 cos=0.915774
+  Confusion matrix (axis=-1) - 5 classes (1047 samples)
+
+  ---------------------------------
+  C0       131   2    6    6   11
+  C1        3   159   4    2   17
+
+  C2        1    3   351   8    7
+  C3        .    .    2   152   .
+  C4       22    6   17    4   133
+
+ Cross accuracy report #1 (reference vs C-model)
+
+ ----------------------------------------------------------------------------------------------------
+ notes: - r/int8 data are dequantized with s=0.00390625 zp=-128
+        - p/int8 data are dequantized with s=0.00390625 zp=-128
+        - the output of the reference model is used as ground truth/reference value
+
+        - 1047 samples (5 items per sample)
+  acc=100.00% rmse=0.000187022 mae=0.000008954 l2r=0.000482401 mean=0.000009 std=0.000187 snr=66.331940 nse=1.000000 cos=1.000000
+
+  Confusion matrix (axis=-1) - 5 classes (1047 samples)
+  ---------------------------------
+
+  C0       157   .    .    .    .
+  C1        .   170   .    .    .
+
+  C2        .    .   380   .    .
+  C3        .    .    .   172   .
+  C4        .    .    .    .   168
+
+ Evaluation report (summary)
+ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ Output              acc       rmse          mae           l2r           mean        std        snr         nse        cos        tensor
+
+ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+ TARGET c-model #1   88.44%    0.180086017   0.081562646   0.464511007   -0.000678   0.180102   7.866704    0.795753   0.915772   'nl_10', 1047 x int8(1x5), m_id=[10]
+ original model #1   88.44%    0.180083990   0.081567124   0.464500010   -0.000687   0.180100   7.866802    0.795757   0.915774   'nl_10', 1047 x int8(1x5), m_id=[10]
+ X-cross #1          100.00%   0.000187022   0.000008954   0.000482401   0.000009    0.000187   66.331940   1.000000   1.000000   'nl_10', 1047 x int8(1x5), m_id=[10]
+ ------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  acc  : Accuracy (class, axis=-1)
+  rmse : Root Mean Squared Error
+  mae  : Mean Absolute Error
+  l2r  : L2 relative error
+  mean : Mean error
+  std  : Standard deviation error
+
+  snr  : Signal-to-Noise Ratio (SNR), bigger is better
+  nse  : Nash-Sutcliffe efficiency criteria, bigger is better, best=1, range=(-inf, 1]
+  cos  : COsine Similarity, bigger is better, best=1, range=(0, 1]
+
+Creating txt report file /Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/run/run-6/.ai/st_ai_output/network_validate_report.txt
+
+elapsed time (VALIDATE): 276.679s
+

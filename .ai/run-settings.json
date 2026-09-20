@@ -1,0 +1,30 @@
+{
+  "args": {
+    "model": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v7_int8_softmax.tflite",
+    "valinput": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v7.npz",
+    "valoutput": "",
+    "mode": "target",
+    "optimization": "balanced",
+    "name": "network",
+    "verbosity": 1,
+    "c-api": "st-ai",
+    "workspace": "/Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/st_ai_ws",
+    "output": "/Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/st_ai_output",
+    "memory-pool": "/Users/richardmatthews/.stm32cubeaistudio/workspace/KeywordSpottingFWAI/.ai/mempools.json",
+    "target": "stm32u5"
+  },
+  "mempools": [
+    {
+      "name": "RAM",
+      "size": 786432,
+      "offset": 536870912,
+      "driver": "RAM",
+      "max": 786432,
+      "mode_available": []
+    }
+  ],
+  "exportWeightsAsBin": false,
+  "copyWeightsToRam": false,
+  "automaticFlash": true,
+  "variant": "ApplicationTemplate"
+}

@@ -1,0 +1,25 @@
+{
+  "args": {
+    "model": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/tflite_models/kws_v5_int8.tflite",
+    "valinput": "/Users/richardmatthews/Documents/Programming/ST-AI/KeywordSpottingFW/HostSW/TestDatasetST/test_ds_int8_kws_v5.npz",
+    "valoutput": "",
+    "mode": "host",
+    "optimization": "balanced",
+    "name": "network",
+    "verbosity": 1,
+    "c-api": "st-ai"
+  },
+  "mempools": [
+    {
+      "name": "RAM",
+      "size": 786432,
+      "offset": 536870912,
+      "driver": "RAM",
+      "max": 786432,
+      "mode_available": []
+    }
+  ],
+  "exportWeightsAsBin": false,
+  "copyWeightsToRam": false,
+  "automaticFlash": true
+}
