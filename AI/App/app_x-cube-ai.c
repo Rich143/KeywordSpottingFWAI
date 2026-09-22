@@ -262,7 +262,8 @@ void main_loop() {
 
 void STM32CubeAI_Studio_AI_Init(void)
 {
-    MX_UARTx_Init();
+    // This is called in main.c, not needed here
+    /*MX_UARTx_Init();*/
     aiInit();  
     /* USER CODE BEGIN init */
     

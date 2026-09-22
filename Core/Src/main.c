@@ -58,7 +58,7 @@ static void MX_ICACHE_Init(void);
 static void MX_USART1_UART_Init(void);
 static void MX_ADF1_Init(void);
 /* USER CODE BEGIN PFP */
-
+int32_t AudioRecord_demo(void);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -110,7 +110,8 @@ STM32CubeAI_Studio_AI_Init();
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-STM32CubeAI_Studio_AI_Process();
+    AudioRecord_demo();
+    STM32CubeAI_Studio_AI_Process();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

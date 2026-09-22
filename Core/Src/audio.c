@@ -152,6 +152,3 @@ void BSP_AUDIO_IN_Error_CallBack(uint32_t Instance)
 /**
 * @}
 */
-
-/**
-* @}
