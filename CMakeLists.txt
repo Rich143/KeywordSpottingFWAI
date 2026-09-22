@@ -45,6 +45,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
+    Core/audio.c
 )
 
 # Add include paths
@@ -68,6 +69,10 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     CMSISDSP::CMSISDSP
     STM32AudioProc
     AudioPreprocessing
+
+    # Drivers
+    b-u585i-iot02a-bsp
+    stm32-bsp-common
 )
 # CMakeLists.txt for STM32Cube AI Studio
 include(AI/STMicroelectronics.Middlewares.cmake)
@@ -84,3 +89,6 @@ add_subdirectory(Middlewares/ST/STM32_AI_AudioPreprocessing_Library)
 
 # Lib
 add_subdirectory(Lib)
+
+# Drivers
+add_subdirectory(Drivers)
