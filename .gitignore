@@ -22,6 +22,10 @@
 *.la
 *.lo
 
+# ST AI Library
+!Middlewares/ST/AI/Lib
+!**/NetworkRuntime1201_CM33_GCC.a
+
 # Shared objects (inc. Windows DLLs)
 *.dll
 *.so
