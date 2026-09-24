@@ -181,6 +181,7 @@ void Error_Handler(void);
 #define WRLS_WKUP_W_GPIO_Port GPIOF
 
 /* USER CODE BEGIN Private defines */
+extern UART_HandleTypeDef huart1;
 
 /* USER CODE END Private defines */
 
