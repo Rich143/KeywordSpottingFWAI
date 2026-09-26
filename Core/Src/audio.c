@@ -2,9 +2,10 @@
   ******************************************************************************
   * @file    audio_record.c
   * @author  MCD Application Team
-  * @brief   Records mic audio via BSP AUDIO driver and streams it to a host
-  *          PC over UART in 1-second chunks, using DMA half/full-transfer
-  *          interrupts as the ping-pong trigger.
+  * @brief   Records one buffer-full of mic audio via BSP AUDIO driver, stops
+  *          capture, then sends that buffer to a host PC over UART - then
+  *          repeats. Capture and transmit never overlap, so UART throughput
+  *          doesn't need to keep pace with the mic in real time.
   ******************************************************************************
   * @attention
   *
@@ -34,14 +35,14 @@
   */
 
 /* Private define ------------------------------------------------------------*/
-#define SAMPLE_RATE_HZ      11025U   /* matches AUDIO_FREQUENCY_11K */
+#define SAMPLE_RATE_HZ      11025U   /* nominal - matches AUDIO_FREQUENCY_11K request,
+                                         still under investigation vs. measured rate */
 #define BITS_PER_SAMPLE     16U
 #define NUM_CHANNELS        1U
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE / 8U)
 
 #define CHUNK_SECONDS       1U
-#define CHUNK_SIZE          (SAMPLE_RATE_HZ * BYTES_PER_SAMPLE * CHUNK_SECONDS)  /* 22050 bytes */
-#define REC_BUFF_SIZE       (2U * CHUNK_SIZE)  /* circular buffer = two chunks (ping-pong) */
+#define BUFFER_SIZE         (SAMPLE_RATE_HZ * BYTES_PER_SAMPLE * CHUNK_SECONDS)  /* one capture buffer */
 
 #define STREAM_HEADER_MAGIC 0x4B575354U  /* 'KWST' - sent once, describes the stream */
 #define CHUNK_HEADER_MAGIC  0x4B575344U  /* 'KWSD' - sent before every chunk */
@@ -68,83 +69,44 @@ typedef struct
 #pragma pack(pop)
 
 /* Private variables ---------------------------------------------------------*/
-static uint8_t         RecordBuff[REC_BUFF_SIZE];
-static __IO uint32_t   RecHalfBuffCplt   = 0;
-static __IO uint32_t   RecBuffCplt       = 0;
-static __IO uint32_t   UartTxBusy        = 0;
-static uint32_t        ChunkSeq          = 0;
-static uint32_t        DroppedChunks     = 0;
-
-/*static volatile uint32_t LastCallbackTick = 0;*/
-/*static volatile uint32_t DeltasMs         = 0;*/
-/*static volatile uint32_t NumDeltas        = 0;*/
-
+static uint8_t         RecordBuff[BUFFER_SIZE];
+static __IO uint32_t   BufferReady = 0;   /* set (in ISR) once a full buffer has been
+                                              captured and DMA has been stopped */
+static uint32_t        ChunkSeq    = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 static void Record_Init(void);
 static void SendStreamHeader(void);
-static void SendChunk(uint8_t *payload);
+static void SendChunk(uint8_t *payload, uint32_t len);
+static void StartCapture(void);
 
 /* Private functions ---------------------------------------------------------*/
 
 /**
-  * @brief  Record mic audio and stream it over UART in 1-second chunks.
+  * @brief  Repeatedly: capture one buffer, stop, send it over UART, repeat.
   * @param  None
   * @retval None
   */
 int32_t AudioRecord_demo(void)
 {
-  printf("\n******AUDIO IN -> UART STREAM EXAMPLE******\n");
+  printf("\n******AUDIO IN -> UART (capture-then-send) EXAMPLE******\n");
 
   Record_Init();
 
   printf("Sending stream header.\n");
   SendStreamHeader();
 
-  printf("Recording + streaming started (Ctrl-C / reset to stop)..\n");
-  if (BSP_AUDIO_IN_Record(0, (uint8_t *)RecordBuff, REC_BUFF_SIZE) != BSP_ERROR_NONE)
-  {
-    printf("AUDIO IN : FAILED.\n");
-    Error_Handler();
-  }
+  StartCapture();
 
   for (;;)
   {
-    if (RecHalfBuffCplt != 0U)
+    if (BufferReady != 0U)
     {
-      RecHalfBuffCplt = 0U;
-      //printf("Sending half buffer.\n");
-      SendChunk(&RecordBuff[0]);
+      BufferReady = 0U;
+      SendChunk(RecordBuff, BUFFER_SIZE);
+      StartCapture();
     }
-
-    if (RecBuffCplt != 0U)
-    {
-      RecBuffCplt = 0U;
-      //printf("Sending full buffer.\n");
-      SendChunk(&RecordBuff[CHUNK_SIZE]);
-    }
-
-    /*if (NumDeltas % 20 == 0U)*/
-    /*{*/
-      /*printf("Delta avg: %d ms\n", DeltasMs / NumDeltas);*/
-    /*}*/
   }
-
-  /* Unreachable with the current infinite loop; left in for reference if you
-   * add a stop condition (button press, host command, etc.) above. */
-  if (BSP_AUDIO_IN_Stop(0) != BSP_ERROR_NONE)
-  {
-    Error_Handler();
-  }
-
-  if (BSP_AUDIO_IN_DeInit(0) != BSP_ERROR_NONE)
-  {
-    Error_Handler();
-  }
-
-  RecBuffCplt     = 0;
-  RecHalfBuffCplt = 0;
-  return 0;
 }
 
 /**
@@ -168,6 +130,19 @@ static void Record_Init(void)
 }
 
 /**
+  * @brief  Kick off capture of one full BUFFER_SIZE buffer.
+  * @retval None
+  */
+static void StartCapture(void)
+{
+  if (BSP_AUDIO_IN_Record(0, (uint8_t *)RecordBuff, BUFFER_SIZE) != BSP_ERROR_NONE)
+  {
+    printf("AUDIO IN : FAILED.\n");
+    Error_Handler();
+  }
+}
+
+/**
   * @brief  Send the one-time stream header describing sample rate / format.
   *         Sent blocking since it's tiny and only happens once at startup.
   * @retval None
@@ -180,81 +155,55 @@ static void SendStreamHeader(void)
   hdr.sample_rate_hz    = SAMPLE_RATE_HZ;
   hdr.bits_per_sample   = BITS_PER_SAMPLE;
   hdr.num_channels      = NUM_CHANNELS;
-  hdr.chunk_size_bytes  = CHUNK_SIZE;
+  hdr.chunk_size_bytes  = BUFFER_SIZE;
 
   HAL_UART_Transmit(STREAM_UART, (uint8_t *)&hdr, sizeof(hdr), HAL_MAX_DELAY);
 }
 
 /**
-  * @brief  Send one completed chunk (header + payload) over UART.
-  *         The header is sent blocking (12 bytes, negligible time); the
-  *         payload is sent via UART DMA so the CPU is free while it goes out.
-  *         If the previous chunk's DMA transmit hasn't finished yet, this
-  *         chunk is dropped rather than corrupting the in-flight transfer -
-  *         at 921600 baud a 1s/22050-byte chunk only takes ~0.24s to send,
-  *         so under normal operation this should never trigger.
-  * @param  payload Pointer to the CHUNK_SIZE-byte region of RecordBuff that
-  *                  the DMA has just finished filling.
+  * @brief  Send one completed chunk (header + payload) over UART, blocking.
+  *         Capture is stopped for the entire duration of this call (it's
+  *         restarted by the caller afterwards), so there's no time pressure
+  *         and no risk of the mic DMA overwriting data mid-send.
+  * @param  payload Pointer to the buffer to send.
+  * @param  len     Number of bytes to send.
   * @retval None
   */
-static void SendChunk(uint8_t *payload)
+static void SendChunk(uint8_t *payload, uint32_t len)
 {
   ChunkHeader_t hdr;
 
-  if (UartTxBusy != 0U)
-  {
-    DroppedChunks++;
-    return;
-  }
-
   hdr.magic = CHUNK_HEADER_MAGIC;
   hdr.seq   = ChunkSeq++;
-  hdr.len   = CHUNK_SIZE;
+  hdr.len   = len;
 
   HAL_UART_Transmit(STREAM_UART, (uint8_t *)&hdr, sizeof(hdr), HAL_MAX_DELAY);
-
-  UartTxBusy = 1U;
-  if (HAL_UART_Transmit_DMA(STREAM_UART, payload, CHUNK_SIZE) != HAL_OK)
-  {
-    UartTxBusy = 0U;
-    DroppedChunks++;
-  }
+  HAL_UART_Transmit(STREAM_UART, payload, len, HAL_MAX_DELAY);
 }
 
 /**
 * @brief  Manage the BSP audio in half transfer complete event.
-*         First half of RecordBuff (chunk 0) is now safe to send.
+*         Unused in capture-then-send mode (only the full buffer matters).
 * @param  Instance Audio in instance.
 * @retval None.
 */
 void BSP_AUDIO_IN_HalfTransfer_CallBack(uint32_t Instance)
 {
-  /*uint32_t now = HAL_GetTick();*/
-  /*uint32_t LastDeltaMs = now - LastCallbackTick;*/
-  /*LastCallbackTick = now;*/
-
-  /*DeltasMs += LastDeltaMs;*/
-  /*NumDeltas++;*/
-
-  RecHalfBuffCplt++;
+  /* not used */
 }
 
 /**
 * @brief  Manage the BSP audio in transfer complete event.
-*         Second half of RecordBuff (chunk 1) is now safe to send.
+*         The buffer is completely full - stop the DMA immediately (from
+*         ISR context) before it wraps around and starts overwriting it,
+*         then flag the main loop to send it.
 * @param  Instance Audio in instance.
 * @retval None.
 */
 void BSP_AUDIO_IN_TransferComplete_CallBack(uint32_t Instance)
 {
-  /*uint32_t now = HAL_GetTick();*/
-  /*uint32_t LastDeltaMs = now - LastCallbackTick;*/
-  /*LastCallbackTick = now;*/
-
-  /*DeltasMs += LastDeltaMs;*/
-  /*NumDeltas++;*/
-
-  RecBuffCplt++;
+  BSP_AUDIO_IN_Stop(Instance);
+  BufferReady = 1U;
 }
 
 /**
@@ -265,19 +214,6 @@ void BSP_AUDIO_IN_TransferComplete_CallBack(uint32_t Instance)
 void BSP_AUDIO_IN_Error_CallBack(uint32_t Instance)
 {
   Error_Handler();
-}
-
-/**
-  * @brief  UART Tx DMA complete callback - marks the link free for the next chunk.
-  * @param  huart UART handle.
-  * @retval None
-  */
-void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
-{
-  if (huart->Instance == STREAM_UART->Instance)
-  {
-    UartTxBusy = 0U;
-  }
 }
 
 /**
