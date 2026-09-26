@@ -2,10 +2,12 @@
   ******************************************************************************
   * @file    audio_record.c
   * @author  MCD Application Team
-  * @brief   Records one buffer-full of mic audio via BSP AUDIO driver, stops
-  *          capture, then sends that buffer to a host PC over UART - then
-  *          repeats. Capture and transmit never overlap, so UART throughput
-  *          doesn't need to keep pace with the mic in real time.
+  * @brief   Continuously records mic audio via BSP AUDIO driver using a 2x1s
+  *          ping-pong capture buffer. The half/full-transfer callbacks copy
+  *          each completed 1-second chunk into a separate 10-second
+  *          accumulator buffer. Once 10 seconds have accumulated, capture is
+  *          stopped and the whole 10s buffer is sent over UART in polling
+  *          (blocking) mode, then capture resumes for the next 10s block.
   ******************************************************************************
   * @attention
   *
@@ -41,8 +43,14 @@
 #define NUM_CHANNELS        1U
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE / 8U)
 
-#define CHUNK_SECONDS       1U
-#define BUFFER_SIZE         (SAMPLE_RATE_HZ * BYTES_PER_SAMPLE * CHUNK_SECONDS)  /* one capture buffer */
+#define ONE_SEC_CHUNK_SIZE  (SAMPLE_RATE_HZ * BYTES_PER_SAMPLE * 1U)  /* one 1s sub-chunk */
+#define REC_BUFF_SIZE       (2U * ONE_SEC_CHUNK_SIZE)                /* ping-pong capture buffer */
+
+#define ACCUM_SECONDS       10U
+#define ACCUM_BUFFER_SIZE   (ACCUM_SECONDS * ONE_SEC_CHUNK_SIZE)     /* 10s accumulator, e.g. ~215 KB -
+                                                                          check this fits alongside the
+                                                                          rest of your RAM budget (model
+                                                                          buffers, etc.) */
 
 #define STREAM_HEADER_MAGIC 0x4B575354U  /* 'KWST' - sent once, describes the stream */
 #define CHUNK_HEADER_MAGIC  0x4B575344U  /* 'KWSD' - sent before every chunk */
@@ -69,29 +77,30 @@ typedef struct
 #pragma pack(pop)
 
 /* Private variables ---------------------------------------------------------*/
-static uint8_t         RecordBuff[BUFFER_SIZE];
-static __IO uint32_t   BufferReady = 0;   /* set (in ISR) once a full buffer has been
-                                              captured and DMA has been stopped */
-static uint32_t        ChunkSeq    = 0;
+static uint8_t         RecordBuff[REC_BUFF_SIZE];    /* 2x1s ping-pong capture buffer */
+static uint8_t         AccumBuff[ACCUM_BUFFER_SIZE]; /* 10s accumulator */
+static volatile uint32_t AccumChunksFilled = 0;      /* how many 1s sub-chunks are in AccumBuff */
+static volatile uint32_t AccumBufferReady  = 0;      /* set (in ISR) once AccumBuff holds a full 10s */
+static uint32_t          ChunkSeq          = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 static void Record_Init(void);
 static void SendStreamHeader(void);
 static void SendChunk(uint8_t *payload, uint32_t len);
 static void StartCapture(void);
-static void ResumeCapture(void);
-static uint32_t GetRecordState(void);
+static void AccumulateChunk(uint8_t *src);
 
 /* Private functions ---------------------------------------------------------*/
 
 /**
-  * @brief  Repeatedly: capture one buffer, stop, send it over UART, repeat.
+  * @brief  Continuously capture audio; every 10 seconds, stop briefly, send
+  *         the accumulated buffer over UART, then resume capture.
   * @param  None
   * @retval None
   */
 int32_t AudioRecord_demo(void)
 {
-  printf("\n******AUDIO IN -> UART (capture-then-send) EXAMPLE******\n");
+  printf("\n******AUDIO IN -> UART (10s accumulator) EXAMPLE******\n");
 
   Record_Init();
 
@@ -102,16 +111,12 @@ int32_t AudioRecord_demo(void)
 
   for (;;)
   {
-    if (BufferReady != 0U)
+    if (AccumBufferReady != 0U)
     {
-      BufferReady = 0U;
-      SendChunk(RecordBuff, BUFFER_SIZE);
-      ResumeCapture();
-    } else {
-      uint32_t state = GetRecordState();
-      if (state != AUDIO_IN_STATE_RECORDING) {
-        ResumeCapture();
-      }
+      AccumBufferReady = 0U;
+      SendChunk(AccumBuff, ACCUM_BUFFER_SIZE);
+      while (1);
+      StartCapture();
     }
   }
 }
@@ -136,38 +141,44 @@ static void Record_Init(void)
   }
 }
 
-static uint32_t GetRecordState(void) {
-  uint32_t state;
-  int32_t ret = BSP_AUDIO_IN_GetState(0, &state);
-  if (ret != BSP_ERROR_NONE) {
-    Error_Handler();
-  }
-
-  return state;
-}
-
 /**
-  * @brief  Kick off capture of one full BUFFER_SIZE buffer.
+  * @brief  Kick off continuous (circular) capture into the 2x1s ping-pong buffer.
   * @retval None
   */
 static void StartCapture(void)
 {
-  int32_t ret = BSP_AUDIO_IN_Record(0, (uint8_t *)RecordBuff, BUFFER_SIZE);
-  if (ret != BSP_ERROR_NONE)
+  if (BSP_AUDIO_IN_Record(0, (uint8_t *)RecordBuff, REC_BUFF_SIZE) != BSP_ERROR_NONE)
   {
     printf("AUDIO IN : FAILED.\n");
     Error_Handler();
   }
 }
 
-static void ResumeCapture(void)
+/**
+  * @brief  Copy one completed 1-second sub-chunk into the 10s accumulator.
+  *         Called from ISR context (half/full-transfer callbacks); the
+  *         memcpy is microseconds, well inside the ~1s window before the
+  *         DMA needs this half of RecordBuff again, so no separate
+  *         double-buffering is needed for AccumBuff itself.
+  *         When the accumulator is full, stop capture immediately (still in
+  *         ISR context, to close the race against the DMA wrapping around)
+  *         and flag the main loop to send it.
+  * @param  src Pointer to the completed 1-second region of RecordBuff.
+  * @retval None
+  */
+static void AccumulateChunk(uint8_t *src)
 {
-      int32_t ret = BSP_AUDIO_IN_Resume(0);
-      if (ret != BSP_ERROR_NONE)
-      {
-        printf("AUDIO IN : FAILED.\n");
-        Error_Handler();
-      }
+  uint8_t *dst = &AccumBuff[AccumChunksFilled * ONE_SEC_CHUNK_SIZE];
+
+  memcpy(dst, src, ONE_SEC_CHUNK_SIZE);
+  AccumChunksFilled++;
+
+  if (AccumChunksFilled >= ACCUM_SECONDS)
+  {
+    BSP_AUDIO_IN_Stop(0);
+    AccumChunksFilled = 0U;
+    AccumBufferReady  = 1U;
+  }
 }
 
 /**
@@ -183,16 +194,16 @@ static void SendStreamHeader(void)
   hdr.sample_rate_hz    = SAMPLE_RATE_HZ;
   hdr.bits_per_sample   = BITS_PER_SAMPLE;
   hdr.num_channels      = NUM_CHANNELS;
-  hdr.chunk_size_bytes  = BUFFER_SIZE;
+  hdr.chunk_size_bytes  = ACCUM_BUFFER_SIZE;
 
   HAL_UART_Transmit(STREAM_UART, (uint8_t *)&hdr, sizeof(hdr), HAL_MAX_DELAY);
 }
 
 /**
-  * @brief  Send one completed chunk (header + payload) over UART, blocking.
-  *         Capture is stopped for the entire duration of this call (it's
-  *         restarted by the caller afterwards), so there's no time pressure
-  *         and no risk of the mic DMA overwriting data mid-send.
+  * @brief  Send one completed 10s chunk (header + payload) over UART, in
+  *         polling mode. Capture is stopped for the entire duration of this
+  *         call (restarted by the caller afterwards), so there's no time
+  *         pressure and no risk of the mic DMA overwriting data mid-send.
   * @param  payload Pointer to the buffer to send.
   * @param  len     Number of bytes to send.
   * @retval None
@@ -211,40 +222,24 @@ static void SendChunk(uint8_t *payload, uint32_t len)
 
 /**
 * @brief  Manage the BSP audio in half transfer complete event.
-*         Unused in capture-then-send mode (only the full buffer matters).
+*         First half of RecordBuff (1s sub-chunk 0) is complete - accumulate it.
 * @param  Instance Audio in instance.
 * @retval None.
 */
 void BSP_AUDIO_IN_HalfTransfer_CallBack(uint32_t Instance)
 {
-  /* not used */
+  AccumulateChunk(&RecordBuff[0]);
 }
 
 /**
 * @brief  Manage the BSP audio in transfer complete event.
-*         The buffer is completely full - stop the DMA immediately (from
-*         ISR context) before it wraps around and starts overwriting it,
-*         then flag the main loop to send it.
+*         Second half of RecordBuff (1s sub-chunk 1) is complete - accumulate it.
 * @param  Instance Audio in instance.
 * @retval None.
 */
 void BSP_AUDIO_IN_TransferComplete_CallBack(uint32_t Instance)
 {
-  uint32_t state;
-  int32_t ret = BSP_AUDIO_IN_GetState(0, &state);
-  if (ret != BSP_ERROR_NONE) {
-    Error_Handler();
-  }
-
-  if (state == AUDIO_IN_STATE_RECORDING) {
-    ret = BSP_AUDIO_IN_Pause(Instance);
-    if (ret != BSP_ERROR_NONE) {
-      Error_Handler();
-    }
-    BufferReady = 1U;
-  } else {
-    // not used
-  }
+  AccumulateChunk(&RecordBuff[ONE_SEC_CHUNK_SIZE]);
 }
 
 /**
