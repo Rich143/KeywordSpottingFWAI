@@ -28,6 +28,7 @@ import sys
 import numpy as np
 import serial
 import sounddevice as sd
+import time
 
 SERIAL_PORT = "/dev/tty.usbmodem2121303"       # CHANGE to your board's serial port (e.g. "/dev/ttyACM0")
 BAUD_RATE = 921600
@@ -116,6 +117,7 @@ def main():
         while True:
             seq, payload = read_next_chunk(ser, chunk_size)
             print(f"Received chunk {seq} ({len(payload)} bytes) - playing...")
+            time.sleep(3)
 
             if last_seq is not None and seq != last_seq + 1:
                 print(f"[warn] gap in sequence: {last_seq} -> {seq}")
@@ -124,6 +126,7 @@ def main():
             samples = np.frombuffer(payload, dtype="<i2").reshape(-1, channels)
             sd.play(samples, samplerate=sample_rate)
             sd.wait()  # block until this chunk has finished playing before reading the next
+            print("Chunk played.")
     except KeyboardInterrupt:
         print("\nStopping.")
     finally:

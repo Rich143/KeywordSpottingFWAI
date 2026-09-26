@@ -60,6 +60,9 @@
 #define MAX_UART_TX_SIZE    32768U       /* HAL_UART_Transmit's Size param is a uint16_t (max 65535) -
                                              stay comfortably under that per call */
 
+#define DISCARD_CHUNKS      8U           /* number of 1s sub-chunks to drop at startup, in case of
+                                             startup corruption - tune as needed */
+
 /* Private typedef -------------------------------------------------------------*/
 #pragma pack(push, 1)
 typedef struct
@@ -84,6 +87,7 @@ static uint8_t         RecordBuff[REC_BUFF_SIZE];    /* 2x1s ping-pong capture b
 static uint8_t         AccumBuff[ACCUM_BUFFER_SIZE]; /* 10s accumulator */
 static volatile uint32_t AccumChunksFilled = 0;      /* how many 1s sub-chunks are in AccumBuff */
 static volatile uint32_t AccumBufferReady  = 0;      /* set (in ISR) once AccumBuff holds a full 10s */
+static volatile uint32_t DiscardChunksRemaining = DISCARD_CHUNKS; /* counts down to 0 at startup */
 static uint32_t          ChunkSeq          = 0;
 
 /* Private function prototypes -----------------------------------------------*/
@@ -159,6 +163,10 @@ static void StartCapture(void)
 
 /**
   * @brief  Copy one completed 1-second sub-chunk into the 10s accumulator.
+  *         The first DISCARD_CHUNKS sub-chunks after startup are dropped
+  *         instead (not copied, not counted), in case the very first bit of
+  *         captured audio is corrupted - once that many have been skipped,
+  *         accumulation proceeds as normal.
   *         Called from ISR context (half/full-transfer callbacks); the
   *         memcpy is microseconds, well inside the ~1s window before the
   *         DMA needs this half of RecordBuff again, so no separate
@@ -171,7 +179,15 @@ static void StartCapture(void)
   */
 static void AccumulateChunk(uint8_t *src)
 {
-  uint8_t *dst = &AccumBuff[AccumChunksFilled * ONE_SEC_CHUNK_SIZE];
+  uint8_t *dst;
+
+  if (DiscardChunksRemaining > 0U)
+  {
+    DiscardChunksRemaining--;
+    return;
+  }
+
+  dst = &AccumBuff[AccumChunksFilled * ONE_SEC_CHUNK_SIZE];
 
   memcpy(dst, src, ONE_SEC_CHUNK_SIZE);
   AccumChunksFilled++;
