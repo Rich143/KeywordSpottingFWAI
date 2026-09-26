@@ -79,6 +79,8 @@ static void Record_Init(void);
 static void SendStreamHeader(void);
 static void SendChunk(uint8_t *payload, uint32_t len);
 static void StartCapture(void);
+static void ResumeCapture(void);
+static uint32_t GetRecordState(void);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -104,7 +106,12 @@ int32_t AudioRecord_demo(void)
     {
       BufferReady = 0U;
       SendChunk(RecordBuff, BUFFER_SIZE);
-      StartCapture();
+      ResumeCapture();
+    } else {
+      uint32_t state = GetRecordState();
+      if (state != AUDIO_IN_STATE_RECORDING) {
+        ResumeCapture();
+      }
     }
   }
 }
@@ -129,17 +136,38 @@ static void Record_Init(void)
   }
 }
 
+static uint32_t GetRecordState(void) {
+  uint32_t state;
+  int32_t ret = BSP_AUDIO_IN_GetState(0, &state);
+  if (ret != BSP_ERROR_NONE) {
+    Error_Handler();
+  }
+
+  return state;
+}
+
 /**
   * @brief  Kick off capture of one full BUFFER_SIZE buffer.
   * @retval None
   */
 static void StartCapture(void)
 {
-  if (BSP_AUDIO_IN_Record(0, (uint8_t *)RecordBuff, BUFFER_SIZE) != BSP_ERROR_NONE)
+  int32_t ret = BSP_AUDIO_IN_Record(0, (uint8_t *)RecordBuff, BUFFER_SIZE);
+  if (ret != BSP_ERROR_NONE)
   {
     printf("AUDIO IN : FAILED.\n");
     Error_Handler();
   }
+}
+
+static void ResumeCapture(void)
+{
+      int32_t ret = BSP_AUDIO_IN_Resume(0);
+      if (ret != BSP_ERROR_NONE)
+      {
+        printf("AUDIO IN : FAILED.\n");
+        Error_Handler();
+      }
 }
 
 /**
@@ -202,8 +230,21 @@ void BSP_AUDIO_IN_HalfTransfer_CallBack(uint32_t Instance)
 */
 void BSP_AUDIO_IN_TransferComplete_CallBack(uint32_t Instance)
 {
-  BSP_AUDIO_IN_Stop(Instance);
-  BufferReady = 1U;
+  uint32_t state;
+  int32_t ret = BSP_AUDIO_IN_GetState(0, &state);
+  if (ret != BSP_ERROR_NONE) {
+    Error_Handler();
+  }
+
+  if (state == AUDIO_IN_STATE_RECORDING) {
+    ret = BSP_AUDIO_IN_Pause(Instance);
+    if (ret != BSP_ERROR_NONE) {
+      Error_Handler();
+    }
+    BufferReady = 1U;
+  } else {
+    // not used
+  }
 }
 
 /**
