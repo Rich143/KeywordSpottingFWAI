@@ -57,6 +57,9 @@
 
 #define STREAM_UART         (&huart1)    /* CHANGE if this collides with your debug/printf UART */
 
+#define MAX_UART_TX_SIZE    32768U       /* HAL_UART_Transmit's Size param is a uint16_t (max 65535) -
+                                             stay comfortably under that per call */
+
 /* Private typedef -------------------------------------------------------------*/
 #pragma pack(push, 1)
 typedef struct
@@ -204,6 +207,9 @@ static void SendStreamHeader(void)
   *         polling mode. Capture is stopped for the entire duration of this
   *         call (restarted by the caller afterwards), so there's no time
   *         pressure and no risk of the mic DMA overwriting data mid-send.
+  *         HAL_UART_Transmit's Size parameter is a uint16_t, so a payload
+  *         over 65535 bytes has to go out as multiple calls - the header is
+  *         still sent exactly once, so the receiver sees it as one chunk.
   * @param  payload Pointer to the buffer to send.
   * @param  len     Number of bytes to send.
   * @retval None
@@ -211,13 +217,22 @@ static void SendStreamHeader(void)
 static void SendChunk(uint8_t *payload, uint32_t len)
 {
   ChunkHeader_t hdr;
+  uint32_t      offset = 0U;
 
   hdr.magic = CHUNK_HEADER_MAGIC;
   hdr.seq   = ChunkSeq++;
   hdr.len   = len;
 
   HAL_UART_Transmit(STREAM_UART, (uint8_t *)&hdr, sizeof(hdr), HAL_MAX_DELAY);
-  HAL_UART_Transmit(STREAM_UART, payload, len, HAL_MAX_DELAY);
+
+  while (offset < len)
+  {
+    uint32_t remaining  = len - offset;
+    uint16_t send_size  = (remaining > MAX_UART_TX_SIZE) ? (uint16_t)MAX_UART_TX_SIZE : (uint16_t)remaining;
+
+    HAL_UART_Transmit(STREAM_UART, &payload[offset], send_size, HAL_MAX_DELAY);
+    offset += send_size;
+  }
 }
 
 /**
