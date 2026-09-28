@@ -25,10 +25,14 @@ can keep reading the serial port without gaps. PREBUFFER_CHUNKS chunks are
 queued before playback starts, to absorb UART burst timing and clock drift
 between the board and the host sound card.
 
+Usage:
+    python receive_and_play.py /dev/tty.usbmodemXXXX
+
 Requirements:
     pip install pyserial sounddevice numpy
 """
 
+import argparse
 import queue
 import struct
 import sys
@@ -37,7 +41,6 @@ import numpy as np
 import serial
 import sounddevice as sd
 
-SERIAL_PORT = "/dev/tty.usbmodem2121303"       # CHANGE to your board's serial port (e.g. "/dev/ttyACM0")
 BAUD_RATE = 921600
 
 PREBUFFER_CHUNKS = 2    # chunks to queue before starting playback
@@ -95,10 +98,10 @@ def read_next_chunk(ser, expected_len):
     magic_bytes = struct.pack("<I", CHUNK_HEADER_MAGIC)
     resync_to_magic(ser, magic_bytes)
 
-    print("Received chunk header magic...")
+    # print("Received chunk header magic...")
 
     rest = read_exact(ser, CHUNK_HEADER_LEN - 4)
-    print("Received chunk header body...")
+    # print("Received chunk header body...")
 
     magic, seq, length = struct.unpack(CHUNK_HEADER_FMT, magic_bytes + rest)
 
@@ -108,7 +111,7 @@ def read_next_chunk(ser, expected_len):
         return seq, None
 
     payload = read_exact(ser, length)
-    print(f"Received chunk data (len = {len(payload)})...")
+    # print(f"Received chunk data (len = {len(payload)})...")
 
     return seq, payload
 
@@ -139,9 +142,22 @@ class ChunkPlayer:
             filled += n
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Receive 1-second PCM chunks from the STM32 over UART and play them."
+    )
+    parser.add_argument(
+        "port",
+        help="serial port of the board's ST-Link VCP (e.g. /dev/tty.usbmodem2121303 or /dev/ttyACM0)",
+    )
+    return parser.parse_args()
+
+
 def main():
-    print(f"Opening {SERIAL_PORT} @ {BAUD_RATE} baud...")
-    ser = serial.Serial(SERIAL_PORT, BAUD_RATE, timeout=None)
+    args = parse_args()
+
+    print(f"Opening {args.port} @ {BAUD_RATE} baud...")
+    ser = serial.Serial(args.port, BAUD_RATE, timeout=None)
 
     sample_rate, bits_per_sample, channels, chunk_size = read_stream_header(ser)
     if bits_per_sample != 16:
