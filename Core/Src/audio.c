@@ -3,11 +3,11 @@
   * @file    audio_record.c
   * @author  MCD Application Team
   * @brief   Continuously records mic audio via BSP AUDIO driver using a 2x1s
-  *          ping-pong capture buffer. The half/full-transfer callbacks copy
-  *          each completed 1-second chunk into a separate 10-second
-  *          accumulator buffer. Once 10 seconds have accumulated, capture is
-  *          stopped and the whole 10s buffer is sent over UART in polling
-  *          (blocking) mode, then capture resumes for the next 10s block.
+  *          ping-pong capture buffer. The half/full-transfer callbacks only
+  *          flag which 1-second half is complete; the main loop then sends
+  *          that half straight out of RecordBuff over UART in polling
+  *          (blocking) mode while the DMA fills the other half. Capture is
+  *          never stopped.
   ******************************************************************************
   * @attention
   *
@@ -43,25 +43,26 @@
 #define NUM_CHANNELS        1U
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE / 8U)
 
-#define ONE_SEC_CHUNK_SIZE  (SAMPLE_RATE_HZ * BYTES_PER_SAMPLE * 1U)  /* one 1s sub-chunk */
-#define REC_BUFF_SIZE       (2U * ONE_SEC_CHUNK_SIZE)                /* ping-pong capture buffer */
-
-#define ACCUM_SECONDS       10U
-#define ACCUM_BUFFER_SIZE   (ACCUM_SECONDS * ONE_SEC_CHUNK_SIZE)     /* 10s accumulator, e.g. ~215 KB -
-                                                                          check this fits alongside the
-                                                                          rest of your RAM budget (model
-                                                                          buffers, etc.) */
+#define ONE_SEC_CHUNK_SIZE  (SAMPLE_RATE_HZ * BYTES_PER_SAMPLE * NUM_CHANNELS)  /* one 1s chunk */
+#define REC_BUFF_SIZE       (2U * ONE_SEC_CHUNK_SIZE)                          /* ping-pong capture buffer */
 
 #define STREAM_HEADER_MAGIC 0x4B575354U  /* 'KWST' - sent once, describes the stream */
 #define CHUNK_HEADER_MAGIC  0x4B575344U  /* 'KWSD' - sent before every chunk */
 
 #define STREAM_UART         (&huart1)    /* CHANGE if this collides with your debug/printf UART */
 
-#define MAX_UART_TX_SIZE    32768U       /* HAL_UART_Transmit's Size param is a uint16_t (max 65535) -
-                                             stay comfortably under that per call */
-
-#define DISCARD_CHUNKS      8U           /* number of 1s sub-chunks to drop at startup, in case of
+#define DISCARD_CHUNKS      8U           /* number of 1s chunks to drop at startup, in case of
                                              startup corruption - tune as needed */
+
+/* Size limits (checked at compile time):
+   - BSP_AUDIO_IN_Record() programs the whole buffer as one GPDMA block, and
+     the block size field (CBR1.BNDT) is 16 bits, in bytes -> REC_BUFF_SIZE <= 65535.
+   - HAL_UART_Transmit()'s Size is a uint16_t -> each chunk is sent in one call.
+   - The DMA half-transfer event splits the buffer in two, so each half must
+     hold a whole number of samples. */
+_Static_assert(REC_BUFF_SIZE <= 0xFFFFU, "REC_BUFF_SIZE exceeds the 16-bit GPDMA block size");
+_Static_assert(ONE_SEC_CHUNK_SIZE <= 0xFFFFU, "Chunk exceeds HAL_UART_Transmit's uint16_t Size");
+_Static_assert((ONE_SEC_CHUNK_SIZE % BYTES_PER_SAMPLE) == 0U, "Chunk must hold whole samples");
 
 /* Private typedef -------------------------------------------------------------*/
 #pragma pack(push, 1)
@@ -83,31 +84,36 @@ typedef struct
 #pragma pack(pop)
 
 /* Private variables ---------------------------------------------------------*/
-static uint8_t         RecordBuff[REC_BUFF_SIZE];    /* 2x1s ping-pong capture buffer */
-static uint8_t         AccumBuff[ACCUM_BUFFER_SIZE]; /* 10s accumulator */
-static volatile uint32_t AccumChunksFilled = 0;      /* how many 1s sub-chunks are in AccumBuff */
-static volatile uint32_t AccumBufferReady  = 0;      /* set (in ISR) once AccumBuff holds a full 10s */
+static uint8_t           RecordBuff[REC_BUFF_SIZE];  /* 2x1s ping-pong capture buffer */
+static volatile uint32_t ChunkReadyCount = 0;        /* incremented (in ISR) per completed 1s half */
+static volatile uint8_t *ChunkReadyPtr   = NULL;     /* half of RecordBuff that most recently completed */
 static volatile uint32_t DiscardChunksRemaining = DISCARD_CHUNKS; /* counts down to 0 at startup */
-static uint32_t          ChunkSeq          = 0;
 
 /* Private function prototypes -----------------------------------------------*/
 static void Record_Init(void);
 static void SendStreamHeader(void);
-static void SendChunk(uint8_t *payload, uint32_t len);
+static void SendChunk(const uint8_t *payload, uint32_t seq, uint32_t len);
 static void StartCapture(void);
-static void AccumulateChunk(uint8_t *src);
+static void ChunkComplete(uint8_t *src);
 
 /* Private functions ---------------------------------------------------------*/
 
 /**
-  * @brief  Continuously capture audio; every 10 seconds, stop briefly, send
-  *         the accumulated buffer over UART, then resume capture.
+  * @brief  Continuously capture audio and send each 1s chunk over UART as
+  *         soon as its half of RecordBuff is complete.
+  *         The chunk is sent directly from RecordBuff: the DMA won't write
+  *         that half again until it has filled the other half (1s later), and
+  *         the send takes ~240 ms at 921600 baud. If the main loop falls
+  *         behind, missed chunks show up as gaps in the sequence number, and
+  *         a chunk that may have been overwritten mid-send is reported.
   * @param  None
   * @retval None
   */
 int32_t AudioRecord_demo(void)
 {
-  printf("\n******AUDIO IN -> UART (10s accumulator) EXAMPLE******\n");
+  uint32_t sent_count = 0U;  /* value of ChunkReadyCount for the last chunk sent */
+
+  printf("\n******AUDIO IN -> UART (1s chunk stream) EXAMPLE******\n");
 
   Record_Init();
 
@@ -118,12 +124,33 @@ int32_t AudioRecord_demo(void)
 
   for (;;)
   {
-    if (AccumBufferReady != 0U)
+    uint32_t       ready_count;
+    const uint8_t *chunk;
+
+    /* Snapshot count and pointer together so the ISR can't update one
+       between the two reads */
+    __disable_irq();
+    ready_count = ChunkReadyCount;
+    chunk       = (const uint8_t *)ChunkReadyPtr;
+    __enable_irq();
+
+    if (ready_count != sent_count)
     {
-      AccumBufferReady = 0U;
-      SendChunk(AccumBuff, ACCUM_BUFFER_SIZE);
-      while (1);
-      StartCapture();
+      if ((ready_count - sent_count) > 1U)
+      {
+        printf("[audio] missed %lu chunk(s)\n", (unsigned long)(ready_count - sent_count - 1U));
+      }
+      sent_count = ready_count;
+
+      /* seq is the capture count (from 0), so the host sees missed chunks as gaps */
+      SendChunk(chunk, ready_count - 1U, ONE_SEC_CHUNK_SIZE);
+
+      if (ChunkReadyCount != ready_count)
+      {
+        /* The other half finished while we were sending, so the DMA has
+           started overwriting the half we just sent */
+        printf("[audio] chunk %lu may be corrupt (send overran)\n", (unsigned long)(ready_count - 1U));
+      }
     }
   }
 }
@@ -162,42 +189,25 @@ static void StartCapture(void)
 }
 
 /**
-  * @brief  Copy one completed 1-second sub-chunk into the 10s accumulator.
-  *         The first DISCARD_CHUNKS sub-chunks after startup are dropped
-  *         instead (not copied, not counted), in case the very first bit of
-  *         captured audio is corrupted - once that many have been skipped,
-  *         accumulation proceeds as normal.
-  *         Called from ISR context (half/full-transfer callbacks); the
-  *         memcpy is microseconds, well inside the ~1s window before the
-  *         DMA needs this half of RecordBuff again, so no separate
-  *         double-buffering is needed for AccumBuff itself.
-  *         When the accumulator is full, stop capture immediately (still in
-  *         ISR context, to close the race against the DMA wrapping around)
-  *         and flag the main loop to send it.
+  * @brief  Flag one completed 1-second half of RecordBuff to the main loop.
+  *         The first DISCARD_CHUNKS chunks after startup are dropped instead
+  *         (not counted), in case the very first bit of captured audio is
+  *         corrupted.
+  *         Called from ISR context (half/full-transfer callbacks), so it only
+  *         records which half is ready; the UART send happens in the main loop.
   * @param  src Pointer to the completed 1-second region of RecordBuff.
   * @retval None
   */
-static void AccumulateChunk(uint8_t *src)
+static void ChunkComplete(uint8_t *src)
 {
-  uint8_t *dst;
-
   if (DiscardChunksRemaining > 0U)
   {
     DiscardChunksRemaining--;
     return;
   }
 
-  dst = &AccumBuff[AccumChunksFilled * ONE_SEC_CHUNK_SIZE];
-
-  memcpy(dst, src, ONE_SEC_CHUNK_SIZE);
-  AccumChunksFilled++;
-
-  if (AccumChunksFilled >= ACCUM_SECONDS)
-  {
-    BSP_AUDIO_IN_Stop(0);
-    AccumChunksFilled = 0U;
-    AccumBufferReady  = 1U;
-  }
+  ChunkReadyPtr = src;
+  ChunkReadyCount++;
 }
 
 /**
@@ -213,64 +223,54 @@ static void SendStreamHeader(void)
   hdr.sample_rate_hz    = SAMPLE_RATE_HZ;
   hdr.bits_per_sample   = BITS_PER_SAMPLE;
   hdr.num_channels      = NUM_CHANNELS;
-  hdr.chunk_size_bytes  = ACCUM_BUFFER_SIZE;
+  hdr.chunk_size_bytes  = ONE_SEC_CHUNK_SIZE;
 
   HAL_UART_Transmit(STREAM_UART, (uint8_t *)&hdr, sizeof(hdr), HAL_MAX_DELAY);
 }
 
 /**
-  * @brief  Send one completed 10s chunk (header + payload) over UART, in
-  *         polling mode. Capture is stopped for the entire duration of this
-  *         call (restarted by the caller afterwards), so there's no time
-  *         pressure and no risk of the mic DMA overwriting data mid-send.
-  *         HAL_UART_Transmit's Size parameter is a uint16_t, so a payload
-  *         over 65535 bytes has to go out as multiple calls - the header is
-  *         still sent exactly once, so the receiver sees it as one chunk.
-  * @param  payload Pointer to the buffer to send.
-  * @param  len     Number of bytes to send.
+  * @brief  Send one 1s chunk (header + payload) over UART, in polling mode.
+  *         At 921600 baud 8N1 (92160 bytes/s) the 12-byte header plus
+  *         22050-byte payload takes ~240 ms, well inside the 1s before the
+  *         DMA comes back to this half of RecordBuff.
+  *         Called from the main loop only - never from the DMA callbacks.
+  * @param  payload Pointer to the chunk to send (a half of RecordBuff).
+  * @param  seq     Chunk sequence number.
+  * @param  len     Number of bytes to send (<= 65535, see _Static_assert).
   * @retval None
   */
-static void SendChunk(uint8_t *payload, uint32_t len)
+static void SendChunk(const uint8_t *payload, uint32_t seq, uint32_t len)
 {
   ChunkHeader_t hdr;
-  uint32_t      offset = 0U;
 
   hdr.magic = CHUNK_HEADER_MAGIC;
-  hdr.seq   = ChunkSeq++;
+  hdr.seq   = seq;
   hdr.len   = len;
 
   HAL_UART_Transmit(STREAM_UART, (uint8_t *)&hdr, sizeof(hdr), HAL_MAX_DELAY);
-
-  while (offset < len)
-  {
-    uint32_t remaining  = len - offset;
-    uint16_t send_size  = (remaining > MAX_UART_TX_SIZE) ? (uint16_t)MAX_UART_TX_SIZE : (uint16_t)remaining;
-
-    HAL_UART_Transmit(STREAM_UART, &payload[offset], send_size, HAL_MAX_DELAY);
-    offset += send_size;
-  }
+  HAL_UART_Transmit(STREAM_UART, (uint8_t *)payload, (uint16_t)len, HAL_MAX_DELAY);
 }
 
 /**
 * @brief  Manage the BSP audio in half transfer complete event.
-*         First half of RecordBuff (1s sub-chunk 0) is complete - accumulate it.
+*         First half of RecordBuff (1s chunk 0) is complete - flag it.
 * @param  Instance Audio in instance.
 * @retval None.
 */
 void BSP_AUDIO_IN_HalfTransfer_CallBack(uint32_t Instance)
 {
-  AccumulateChunk(&RecordBuff[0]);
+  ChunkComplete(&RecordBuff[0]);
 }
 
 /**
 * @brief  Manage the BSP audio in transfer complete event.
-*         Second half of RecordBuff (1s sub-chunk 1) is complete - accumulate it.
+*         Second half of RecordBuff (1s chunk 1) is complete - flag it.
 * @param  Instance Audio in instance.
 * @retval None.
 */
 void BSP_AUDIO_IN_TransferComplete_CallBack(uint32_t Instance)
 {
-  AccumulateChunk(&RecordBuff[ONE_SEC_CHUNK_SIZE]);
+  ChunkComplete(&RecordBuff[ONE_SEC_CHUNK_SIZE]);
 }
 
 /**
