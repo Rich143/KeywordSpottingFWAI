@@ -68,6 +68,10 @@ build/
 # Dataset
 dataset/
 
+# Python
+__pycache__/
+*.py[cod]
+
 
 # Eclipse / Java IDE settings
 .settings/
