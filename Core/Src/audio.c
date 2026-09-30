@@ -37,8 +37,7 @@
   */
 
 /* Private define ------------------------------------------------------------*/
-#define SAMPLE_RATE_HZ      11025U   /* nominal - matches AUDIO_FREQUENCY_11K request,
-                                         still under investigation vs. measured rate */
+#define SAMPLE_RATE_HZ      AUDIO_FREQUENCY_16K
 #define BITS_PER_SAMPLE     16U
 #define NUM_CHANNELS        1U
 #define BYTES_PER_SAMPLE    (BITS_PER_SAMPLE / 8U)
@@ -165,7 +164,7 @@ static void Record_Init(void)
   BSP_AUDIO_Init_t AudioInit;
 
   AudioInit.Device        = AUDIO_IN_DEVICE_DIGITAL_MIC1;
-  AudioInit.SampleRate    = AUDIO_FREQUENCY_11K;
+  AudioInit.SampleRate    = SAMPLE_RATE_HZ;
   AudioInit.BitsPerSample = AUDIO_RESOLUTION_16B;
   AudioInit.ChannelsNbr   = NUM_CHANNELS;
   AudioInit.Volume        = 100; /* Not used */

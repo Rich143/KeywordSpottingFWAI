@@ -26,7 +26,12 @@ queued before playback starts, to absorb UART burst timing and clock drift
 between the board and the host sound card.
 
 Usage:
-    python receive_and_play.py /dev/tty.usbmodemXXXX
+    python receive_and_play.py -p /dev/tty.usbmodemXXXX
+    python receive_and_play.py -p /dev/tty.usbmodemXXXX -o capture.wav   # also save to WAV
+
+With -o, every received chunk is appended to a single continuous WAV file.
+Missed chunks (sequence gaps) are written as silence so the timeline stays
+aligned with real time.
 
 Requirements:
     pip install pyserial sounddevice numpy
@@ -36,6 +41,7 @@ import argparse
 import queue
 import struct
 import sys
+import wave
 
 import numpy as np
 import serial
@@ -147,10 +153,25 @@ def parse_args():
         description="Receive 1-second PCM chunks from the STM32 over UART and play them."
     )
     parser.add_argument(
-        "port",
+        "-p", "--port",
         help="serial port of the board's ST-Link VCP (e.g. /dev/tty.usbmodem2121303 or /dev/ttyACM0)",
     )
+    parser.add_argument(
+        "-o", "--output",
+        metavar="WAV_PATH",
+        help="also save all received audio to this .wav file (one continuous recording)",
+    )
     return parser.parse_args()
+
+
+def open_wav(path, sample_rate, bits_per_sample, channels):
+    """Open a WAV file for writing. The wave module rewrites the header after
+    every writeframes() call, so the file stays valid if the script is killed."""
+    wav = wave.open(path, "wb")
+    wav.setnchannels(channels)
+    wav.setsampwidth(bits_per_sample // 8)
+    wav.setframerate(sample_rate)
+    return wav
 
 
 def main():
@@ -163,6 +184,11 @@ def main():
     if bits_per_sample != 16:
         print(f"Only 16-bit PCM is supported by this script, got {bits_per_sample}-bit.")
         sys.exit(1)
+
+    wav = None
+    if args.output:
+        wav = open_wav(args.output, sample_rate, bits_per_sample, channels)
+        print(f"Saving audio to {args.output}")
 
     player = ChunkPlayer(channels)
     stream = sd.OutputStream(
@@ -180,7 +206,14 @@ def main():
 
             if last_seq is not None and seq != last_seq + 1:
                 print(f"[warn] gap in sequence: {last_seq} -> {seq}")
+                # Fill missed chunks with silence so the saved file keeps real-time
+                # alignment. A backwards jump means the board reset, so don't pad.
+                if wav is not None and seq > last_seq + 1:
+                    wav.writeframes(bytes(chunk_size * (seq - last_seq - 1)))
             last_seq = seq
+
+            if wav is not None:
+                wav.writeframes(payload)
 
             samples = np.frombuffer(payload, dtype="<i2").reshape(-1, channels)
             player.queue.put(samples)
@@ -200,6 +233,10 @@ def main():
         stream.stop()
         stream.close()
         ser.close()
+        if wav is not None:
+            seconds = wav.getnframes() / sample_rate
+            wav.close()
+            print(f"Saved {seconds:.1f}s of audio to {args.output}")
 
 
 if __name__ == "__main__":
