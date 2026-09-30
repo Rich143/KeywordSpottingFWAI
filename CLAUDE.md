@@ -92,6 +92,9 @@ and host-tested but not yet called on target; inference is initialised but not r
 - **On-target audio check**: flash, run `python HostSW/receive_and_play.py <serial-port>`
   (e.g. `/dev/tty.usbmodem2021303`), listen
 - **Model validation**: STM32Cube AI Studio validate using `HostSW/TestDatasetST/*.npz`
+- **Model on long audio** (host, sliding window): `make_test_wav.py -o t.wav` (or a board capture via
+  `receive_and_play.py -o`) → `run_model_on_wav.py -m tflite_models/<model>.tflite -w t.wav` →
+  `view_results.py -w t.wav`
 
 ## Host Software (`HostSW/`)
 - `TrainModel.ipynb` (current, v7): Google Speech Commands v0.02 → features → CNN → int8 PTQ →
@@ -99,6 +102,10 @@ and host-tested but not yet called on target; inference is initialised but not r
   (`HostSW/build/.../libAudioPreprocessing.dylib`, built from `HostSW/CMakeLists.txt`), so training
   features match the firmware.
 - `receive_and_play.py`: UART audio receiver and playback (pyserial, sounddevice, numpy)
+- `run_model_on_wav.py`: sliding 1 s window over a WAV → C preprocessing dylib → quantise → tflite →
+  per-window CSV. Its `AudioPreprocessor` is a copy of the notebook's; keep them in sync
+- `make_test_wav.py`: stitches random Speech Commands clips into a WAV + `<stem>_truth.csv`
+- `view_results.py`: plays the WAV with the model output animated in sync (matplotlib, sounddevice)
 - No requirements.txt. Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
 - Uses conda env "kws"
