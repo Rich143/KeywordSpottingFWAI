@@ -43,10 +43,15 @@ and host-tested but not yet called on target; inference is initialised but not r
   CMake 4.3 + Ninja, st-arm-clangd, ST-LINK GDB server, STM32CubeProgrammer 2.23
 - **Flags**: `-mcpu=cortex-m33 -mfpu=fpv5-sp-d16 -mfloat-abi=hard`, C11, `nano.specs`, `--gc-sections`
 - **Configs**: Debug `-O0 -g3`, Release `-Os -g0` (alternative clang toolchain in `cmake/starm-clang.cmake`, unused)
-- **Build**:
+- **Build**: always use `cube-cmake` (the STM32Cube extension's wrapper; it puts the ST bundle's
+  gcc 14.3.1 and Ninja on PATH). Plain `cmake` from a terminal fails: Ninja isn't on PATH and
+  `/Applications/ArmGNUToolchain/Latest` (Arm GNU 12.2) shadows the ST toolchain.
   ```
-  cmake --preset Debug && cmake --build --preset Debug   # → build/Debug/B-U585I-IOT02A.elf
+  CUBE_CMAKE=$(ls ~/.vscode/extensions/stmicroelectronics.stm32cube-ide-build-cmake-*/resources/cube-cmake/darwin/aarch64/cube-cmake | tail -1)
+  $CUBE_CMAKE --preset Debug -DCMAKE_COMMAND=cube-cmake && $CUBE_CMAKE --build build/Debug   # → build/Debug/B-U585I-IOT02A.elf
   ```
+- The toolchain file sets `CMAKE_AR`/`CMAKE_RANLIB` explicitly. Without them CMake can pick macOS
+  `/usr/bin/ar`, whose archive index GNU ld can't read → "undefined reference" link errors for BSP/library symbols.
 - **Adding source files**: user sources go in the root `CMakeLists.txt`
   (`target_sources`). `cmake/stm32cubemx/CMakeLists.txt` is CubeMX-generated.
 - **Flash/debug**: via the STM32Cube VS Code extension (ST-Link)
