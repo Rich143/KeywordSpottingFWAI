@@ -84,3 +84,7 @@ __pycache__/
 !.vscode/tasks.json
 !.vscode/launch.json
 !.vscode/extensions.json
+
+# Training checkpoints: keep best.keras only
+HostSW/checkpoints/**/model_epoch*.keras
+HostSW/checkpoints/**/latest.keras
