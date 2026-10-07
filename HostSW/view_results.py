@@ -34,6 +34,7 @@ import time
 import wave
 from dataclasses import dataclass
 
+import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import sounddevice as sd
@@ -44,6 +45,13 @@ WINDOW_LEN_S = 1.0
 ENVELOPE_BIN_S = 0.01   # waveform drawn as a min/max envelope per 10 ms
 FRAME_INTERVAL_MS = 33  # ~30 fps
 SEEK_STEP_S = 1.0
+
+# Samples per audio callback. With the default (0, let the host choose), CoreAudio
+# asks for ~14 samples per callback at 16 kHz, i.e. >1000 Python callbacks/s. Each
+# needs the GIL, which the main thread holds while matplotlib redraws (~30-40 ms
+# per frame), so callbacks are missed and ~20% of the audio is dropped (garbled
+# playback). 1024 samples = 64 ms per callback leaves plenty of headroom.
+AUDIO_BLOCKSIZE = 1024
 
 HELP_TEXT = "space: pause/resume    ←/→: seek 1 s    click: seek    home: restart"
 
@@ -108,7 +116,7 @@ class ResultsView:
         self.centres = results.centre_s
 
         n_labels = len(results.labels)
-        cmap = plt.get_cmap("tab10")
+        cmap = matplotlib.colormaps["tab10"]
         colours = [cmap(k % 10) for k in range(n_labels)]
 
         self.fig, (self.ax_wave, self.ax_label, self.ax_prob) = plt.subplots(
@@ -213,7 +221,8 @@ class Player:
         self.feeding = True
         self.feeding_changed_at = 0.0
         self.stream = sd.OutputStream(
-            samplerate=sample_rate, channels=1, dtype="float32", callback=self._callback
+            samplerate=sample_rate, channels=1, dtype="float32", callback=self._callback,
+            blocksize=AUDIO_BLOCKSIZE,
         )
 
     def _callback(self, outdata, frames, time_info, status):
