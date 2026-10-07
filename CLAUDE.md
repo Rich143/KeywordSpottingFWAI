@@ -106,9 +106,11 @@ and host-tested but not yet called on target; inference is initialised but not r
   per-window CSV. Its `AudioPreprocessor` is a copy of the notebook's; keep them in sync
 - `make_test_wav.py`: stitches random Speech Commands clips into a WAV + `<stem>_truth.csv`
 - `view_results.py`: plays the WAV with the model output animated in sync (matplotlib, sounddevice)
-- No requirements.txt. Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, numpy, pandas,
+- Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
-- Uses conda env "kws"
+- Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).
+  `HostSW/setup_env.sh` creates it, builds the preprocessing dylib and smoke-tests imports.
+  If you add packages, regenerate the pip list from `pip freeze` (drop `pip @ file://...` lines)
 
 ## Known Issues & Workarounds
 - `MX_ADF1_Init()` in `main.c` and `HAL_MDF_MspInit/DeInit` in `stm32u5xx_hal_msp.c` are commented
