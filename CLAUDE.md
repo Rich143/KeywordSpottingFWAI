@@ -103,7 +103,9 @@ and host-tested but not yet called on target; inference is initialised but not r
 - **Board eval set** (`HostSW/eval_recordings/`, held out, never train on it; see its README): record with
   `receive_and_play.py -o`, label keywords (+ `ignore`) in Audacity → `audacity_labels_to_truth.py` →
   `run_model_on_wav.py` → `score_results.py --sweep` (keyword recall, false accepts/min) → `view_results.py`.
-  `eval_wav.py -w <wav>` runs those last three steps in one go
+  `eval_wav.py -w <wav>` runs those last three steps in one go.
+  `snapshot_eval.py -v <ver> -m <model>` scores every labelled recording (minus `eval_ignore.txt`) and
+  appends per-recording + pooled `ALL` rows to `eval_recordings/eval_history.csv`. Run it for each new model
 
 ## Host Software (`HostSW/`)
 - `TrainModel.ipynb` (current, v7): Google Speech Commands v0.02 → features → CNN → int8 PTQ →

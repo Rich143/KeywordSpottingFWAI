@@ -20,7 +20,8 @@ python HostSW/receive_and_play.py -p /dev/tty.usbmodemXXXX -o HostSW/eval_record
 ```
 
 Aim for about 5 minutes per file, with roughly 10 of each keyword (`forward`, `backward`, `stop`).
-Mix:
+[`script_eval_02.md`](script_eval_02.md) is a ready-made script to read aloud that covers all of the
+following. Mix:
 - keywords said on their own, with pauses around them
 - keywords inside sentences: "go forward a bit", "please stop there", "back up, backward"
 - fast and slow, quiet and loud, at about 0.3 m, 1 m and 2 m from the board
@@ -68,6 +69,23 @@ python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w eval_r
 python score_results.py -r eval_recordings/eval_02_kitchen.csv --sweep
 python view_results.py -w eval_recordings/eval_02_kitchen.wav
 ```
+
+## 4. Snapshot a model version
+
+When you have a new model, score it on every labelled recording and append the results to
+`eval_history.csv` (committed, so all versions can be compared):
+```
+cd HostSW
+python snapshot_eval.py -v v8 -m tflite_models/kws_v8_int8_softmax.tflite --notes "what changed"
+```
+It converts any `_labels.txt` newer than its `_truth.csv`, runs the model, and scores with the same
+code as `score_results.py`. It writes one row per recording and an `ALL` row that pools them. To
+leave a recording out (for example a broken one), add its filename or a glob to `eval_ignore.txt`,
+one per line. Detection settings (`--avg`, `--threshold`, `--suppress`) are stored with each
+snapshot. Compare versions at the same settings, and on the same set of recordings, since adding
+recordings changes the `ALL` numbers.
+
+---
 
 `score_results.py` prints recall per keyword, false accepts per minute and per hour, and the times
 of every miss and false accept. `view_results.py` then shows each detection as a triangle (green =

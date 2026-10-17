@@ -1,3 +1,4 @@
 # Generated per model/settings (run_model_on_wav.py, score_results.py); only labels are committed
 *.csv
 !*_truth.csv
+!eval_history.csv
