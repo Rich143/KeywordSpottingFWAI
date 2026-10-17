@@ -1,0 +1,2 @@
+# Board-mic training recordings (HostSW/dataset_board/) are stored with Git LFS
+HostSW/dataset_board/**/*.wav filter=lfs diff=lfs merge=lfs -text
