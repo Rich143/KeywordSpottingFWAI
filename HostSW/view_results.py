@@ -7,9 +7,13 @@ Three panels share a scrolling time axis, with a playback cursor:
   2. predicted label per window (y axis = class name)
   3. per-class softmax probabilities
 Each window's prediction is plotted at the window's centre (start + 0.5 s).
-If a ground-truth CSV is available (from make_test_wav.py), the true clip
-spans are shaded on the waveform and drawn as a band on the true label's row,
-so a correct prediction is the line running through the band.
+If a ground-truth CSV is available (from make_test_wav.py or
+audacity_labels_to_truth.py), the true clip spans are shaded on the waveform
+and drawn as a band on the true label's row, so a correct prediction is the
+line running through the band. 'ignore' spans are shaded grey on the waveform.
+If a detections CSV is available (from score_results.py), each smoothed
+detection is drawn as a triangle on its label's row: green for a hit, red for
+a false accept / substitution / duplicate, grey if inside an 'ignore' span.
 
 Sync: the sounddevice output callback advances the playback position, and the
 animation just reads it (minus the output latency), so the cursor follows what
@@ -18,8 +22,8 @@ is actually heard and can't drift from it.
 Controls: space pause/resume, left/right seek 1 s, click a plot to seek, home restart.
 
 Usage:
-    python view_results.py -w capture.wav                     # reads capture.csv (+ capture_truth.csv if present)
-    python view_results.py -w capture.wav -r results.csv -t truth.csv --span 10
+    python view_results.py -w capture.wav     # reads capture.csv (+ capture_truth.csv, capture_detections.csv if present)
+    python view_results.py -w capture.wav -r results.csv -t truth.csv -d detections.csv --span 10
 
 Requirements:
     pip install numpy matplotlib sounddevice
@@ -54,6 +58,9 @@ SEEK_STEP_S = 1.0
 AUDIO_BLOCKSIZE = 1024
 
 HELP_TEXT = "space: pause/resume    ←/→: seek 1 s    click: seek    home: restart"
+
+IGNORE_LABEL = "ignore"
+DETECTION_COLOURS = {"hit": "tab:green", "ignored": "0.6"}   # anything else: false accept (red)
 
 
 @dataclass
@@ -104,11 +111,17 @@ def load_truth(path):
         return [(float(r["start_s"]), float(r["end_s"]), r["label"]) for r in csv.DictReader(f)]
 
 
+def load_detections(path):
+    """Returns a list of (time_s, label, outcome)."""
+    with open(path, newline="") as f:
+        return [(float(r["time_s"]), r["label"], r["outcome"]) for r in csv.DictReader(f)]
+
+
 class ResultsView:
     """The figure. draw_at(t) updates it for playback time t; it knows nothing
     about audio, so it can be driven by the player or rendered headless."""
 
-    def __init__(self, signal, sample_rate, results, truth=None, span_s=6.0):
+    def __init__(self, signal, sample_rate, results, truth=None, span_s=6.0, detections=None):
         self.results = results
         self.truth = truth or []
         self.span_s = span_s
@@ -134,6 +147,9 @@ class ResultsView:
 
         # 2. Predicted label, with truth bands on each clip's true-label row
         for start_s, end_s, label in self.truth:
+            if label == IGNORE_LABEL:
+                self.ax_wave.axvspan(start_s, end_s, color="0.5", alpha=0.25, lw=0)
+                continue
             if label not in results.labels:
                 print(f"[warn] truth label '{label}' is not a model label, not drawn")
                 continue
@@ -147,6 +163,13 @@ class ResultsView:
             self.centres, results.label_idx, s=12, zorder=3,
             c=[colours[k] for k in results.label_idx],
         )
+        dets = [d for d in (detections or []) if d[1] in results.labels]
+        if dets:
+            self.ax_label.scatter(
+                [t for t, _, _ in dets], [results.labels.index(label) for _, label, _ in dets],
+                marker="v", s=110, zorder=4, edgecolors="k", linewidths=0.8,
+                c=[DETECTION_COLOURS.get(outcome, "tab:red") for _, _, outcome in dets],
+            )
         self.ax_label.set_yticks(range(n_labels), results.labels)
         self.ax_label.set_ylim(n_labels - 0.5, -0.5)   # first label at the top
         self.ax_label.set_ylabel("predicted label")
@@ -286,6 +309,10 @@ def parse_args():
         "-t", "--truth",
         help="ground-truth CSV from make_test_wav.py (default: <wav stem>_truth.csv if it exists)",
     )
+    parser.add_argument(
+        "-d", "--detections",
+        help="detections CSV from score_results.py (default: <wav stem>_detections.csv if it exists)",
+    )
     parser.add_argument("--span", type=float, default=6.0, help="visible seconds (default: 6)")
     return parser.parse_args()
 
@@ -301,17 +328,25 @@ def main():
     elif wav_path.with_name(wav_path.stem + "_truth.csv").exists():
         truth_path = wav_path.with_name(wav_path.stem + "_truth.csv")
 
+    detections_path = None
+    if args.detections:
+        detections_path = pathlib.Path(args.detections)
+    elif wav_path.with_name(wav_path.stem + "_detections.csv").exists():
+        detections_path = wav_path.with_name(wav_path.stem + "_detections.csv")
+
     signal, sample_rate = load_wav(wav_path)
     results = load_results(results_path)
     truth = load_truth(truth_path) if truth_path else None
+    detections = load_detections(detections_path) if detections_path else None
     print(f"WAV {wav_path} ({len(signal) / sample_rate:.2f}s), results {results_path} ({len(results.start_s)} windows)"
-          + (f", truth {truth_path}" if truth_path else ""))
+          + (f", truth {truth_path}" if truth_path else "")
+          + (f", detections {detections_path}" if detections_path else ""))
 
     # Free up keys that matplotlib binds to its own navigation by default
     for keymap, keys in (("keymap.back", ["left"]), ("keymap.forward", ["right"]), ("keymap.home", ["home"])):
         plt.rcParams[keymap] = [k for k in plt.rcParams[keymap] if k not in keys]
 
-    view = ResultsView(signal, sample_rate, results, truth, span_s=args.span)
+    view = ResultsView(signal, sample_rate, results, truth, span_s=args.span, detections=detections)
     player = Player(signal, sample_rate)
 
     def on_key(event):

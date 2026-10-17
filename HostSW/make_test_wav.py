@@ -138,7 +138,8 @@ def main():
         writer = csv.writer(f)
         writer.writerow(["start_s", "end_s", "label", "file"])
         for start_s, end_s, label, file in truth:
-            writer.writerow([f"{start_s:.4f}", f"{end_s:.4f}", label, file])
+            # 6 dp so times are sample-exact (1 sample = 62.5 us at 16 kHz)
+            writer.writerow([f"{start_s:.6f}", f"{end_s:.6f}", label, file])
 
     print(f"Wrote {wav_path} ({len(signal) / SAMPLE_RATE_HZ:.2f}s, {args.num_clips} clips)")
     print(f"Wrote {truth_path}")

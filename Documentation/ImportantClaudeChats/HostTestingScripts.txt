@@ -1,0 +1,1965 @@
+
+❯ I'd like you to write a python script for testing my tflite kws model against
+  the .wav files I record using the recive and play script. It should:
+
+  - Load the specified .tflite model, and open the specified .wav file
+  - Set up a pipeline to pass 1 sec frames to the tflite model
+    - slide a 1 sec window along the .wav file, with a specified stride length
+    - Use the preprocessing dynamic library to preprocess the 1 sec window into
+  a spectrogram to pass into the model (see how it’s done in TrainModel
+  notebook)
+    - Quantize the spectrogram using the scale and zero point from the tflite
+  model
+    - pass the quantized spectrogram to the tflite model
+    - capture the output, converting from softmax to the label name
+  - Save the results to a .csv file with both the softmax, label name, label
+  number as well as a timestamp of the current window (indexed from the start
+  of the wav file)
+
+⏺ I'll start by looking at the host-side code: how the notebook calls the
+  preprocessing library, and what format receive_and_play.py writes.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ Now the notebook — I'll pull out the code cells that touch ctypes, the dylib,
+  quantisation and the class labels.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ I've confirmed preprocessing, label order, and quantization. Next I'll check
+  how export_model is constructed and inspect the tflite model's actual
+  input/output tensor details.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ I have what I need. The task is self-contained, so I'm skipping the design
+  sub-agent and writing the plan directly.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to:
+     ~/.claude/plans/pasted-content-id-5903-i-d-like-lovely-kahan.md · /plan to
+     edit
+     Plan: HostSW/run_model_on_wav.py: sliding-window KWS inference on recorded
+     WAVs
+
+     Context
+
+     receive_and_play.py -o capture.wav now saves on-board mic audio. The next
+     step is to check how the
+     trained int8 model does on real board audio, not on Speech Commands clips.
+     We check it on the host
+     first, before the firmware runs inference. The script slides a 1 s window
+     along the WAV. For each
+     window it uses the same C preprocessing dylib as training and quantises the
+     spectrogram exactly as
+     the notebook does. It runs the tflite model and writes one CSV row per
+     window.
+
+     Facts established from the code
+
+     - Preprocessing (TrainModel.ipynb cell 3, AudioPreprocessor): ctypes
+       wrapper around
+       HostSW/build/audioproc-build/libAudioPreprocessing.dylib. Each window is
+       split into 512-sample
+       frames with a 352-sample stride, giving exactly 45 frames from 16000
+       samples. It clears, then calls
+       process_frame on a copy of each frame (the C code mutates its input),
+       then reads the spectrogram.
+       The result is reshaped (45, 30).T → (30, 45).
+     - Input scaling: training loads audio with tf.audio.decode_wav → float32 in
+       [-1, 1). For the
+       int16 WAV this is samples / 32768.0.
+     - No normalisation inside or outside the model: compute_norm is computed
+       but not applied.
+       export_model = model + Softmax.
+     - Model I/O (checked with LiteRT): kws_v7_int8_softmax.tflite input
+       [1,30,45] int8, scale 0.017804,
+       zp -35. Output [1,5] int8, scale 1/256, zp -128. Float model: same
+       shapes, float32.
+     - Labels (cell 17): ['forward', 'backward', 'stop', '_background_noise_',
+       'other'].
+     - Recordings: 16 kHz, 16-bit, mono (firmware SAMPLE_RATE_HZ =
+       AUDIO_FREQUENCY_16K), written with
+       stdlib wave.
+
+     Implementation: one new file, HostSW/run_model_on_wav.py
+
+     Style follows receive_and_play.py: a module docstring with usage, constants
+     at the top, small
+     functions, argparse, main(). Dependencies: numpy + ai_edge_litert only. No
+     TensorFlow import,
+     so it starts fast.
+
+     1. CLI
+        - -m/--model: path to the .tflite file (required)
+        - -w/--wav: path to the recording (required)
+        - -s/--stride: stride in seconds (default 0.1). It is converted to
+          samples with round() and
+          must be ≥ 1 sample.
+        - -o/--output: CSV path (default: WAV path with a .csv suffix)
+        - --lib: dylib path (default
+          build/audioproc-build/libAudioPreprocessing.dylib, resolved
+          relative to the script's own directory so the script works from any
+          cwd)
+     2. AudioPreprocessor: copied from notebook cell 3 (same constants, same
+        signatures, same
+        copy-per-frame behaviour and error checks). It is copied rather than
+        imported because the notebook
+        isn't importable. A comment points back to the notebook as the source of
+        truth.
+     3. load_wav(path): uses wave. It checks that the WAV is 16-bit and 16000
+        Hz, and exits with a
+        clear error otherwise (no silent resampling). If the WAV is
+        multi-channel it takes channel 0. It
+        returns float32 samples / 32768.0.
+     4. KwsModel wrapper: Interpreter(model_path), allocate_tensors(), and the
+        input/output details.
+        It asserts that the input shape is [1, 30, 45] and that the output size
+        equals len(LABELS).
+        - quantise(spec): if the input dtype is integer, computes
+          round(spec / scale + zp), clipped to the dtype range, then cast (as in
+          dataset_to_quantized_npz). The clip matters: without it, out-of-range
+          values wrap around when
+          cast to int8, and louder board audio may push log-mel values outside
+          the calibrated range. Float
+          models pass the spectrogram through unchanged, so
+          kws_v7_float32_softmax.tflite also works.
+          The function also returns the number of clipped elements.
+        - predict(spec) → dequantised probabilities (q - zp) * scale (or raw
+          values for float models).
+     5. Sliding window loop: starts = range(0, n - 16000 + 1, stride_samples). A
+        trailing partial
+        window is dropped, and a WAV shorter than 1 s is an error. For each
+        window: compute the spectrogram,
+        quantise, predict, take the argmax, and write a row.
+     6. CSV (stdlib csv) columns:
+        window, start_s, end_s, label_idx, label, p_forward, p_backward, p_stop,
+        p__background_noise_, p_other, clipped.
+        start_s/end_s are measured from the start of the WAV, to 4 dp.
+        Probabilities are to 4 dp.
+        clipped is the number of spectrogram cells saturated by quantisation.
+     7. Console summary: model quantisation params, WAV duration, and number of
+        windows. Then per-label
+        prediction counts, and a warning showing the total clip fraction if any
+        cells clipped. A high clip
+        fraction is an early sign of a level/gain mismatch between the board mic
+        and the dataset.
+
+     Verification
+
+     Run in the kws conda env from HostSW/:
+     1. Sanity on known audio: pick a Speech Commands clip, e.g.
+        dataset/forward/<file>.wav, and run
+        with -s 1.0 (1 window). Its label should normally be forward. Also
+        compare the probabilities
+        with the float model to check that quantisation behaves.
+     2. Synthetic long file: in the scratchpad, concatenate a few dataset clips
+        (forward, stop,
+        background noise) into one WAV. Run with -s 0.1 and check that the
+        predicted labels change at
+        the expected timestamps and that the row count equals floor((n - 16000)
+        / 1600) + 1.
+     3. Board recording: run on a receive_and_play.py -o capture if one is
+        available (none is in
+        the repo yet).
+     4. Error paths: a WAV shorter than 1 s, and a 44.1 kHz WAV. Both should
+        give clear messages.
+
+⏺ Plan approved. I'll write the script now.
+
+⏺ Write(HostSW/run_model_on_wav.py)
+  ⎿  Wrote 296 lines to HostSW/run_model_on_wav.py
+       1 """
+         econd window,
+       3 and save the per-window results to CSV.
+       5 Intended for recordings made with receive_and_play.py -o, to che
+         ck how the
+          on target.
+       7
+       9   int16 PCM -> float32 in [-1, 1)  (same scaling as tf.audio.dec
+         ode_wav)
+         ary via ctypes
+     … +354 lines (ctrl+o to expand)
+
+⏺ Now I'll verify it. First, some test WAVs in the scratchpad built from dataset
+  clips, zero-padded to 1 s the same way decode_wav(desired_samples=16000) pads
+  them.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ I've written HostSW/run_model_on_wav.py, and it runs correctly on test WAVs
+  made from dataset clips. I haven't tested it on an actual board recording yet,
+  because there isn't one in the repo.
+
+  conda activate kws
+  python HostSW/run_model_on_wav.py -m
+  HostSW/tflite_models/kws_v7_int8_softmax.tflite -w capture.wav -s 0.1
+
+  - Options: -s is the stride in seconds (default 0.1). -o sets the CSV path; by
+    default it's the WAV path with .csv. --lib overrides the dylib path, which
+    by default is found relative to the script, so it works from any directory.
+  - CSV columns: window, start_s, end_s, label_idx, label, p_forward … p_other,
+    clipped. The probabilities are the dequantised softmax outputs.
+
+  How it matches training:
+  - Audio scaling: the int16 samples are divided by 32768, which is what
+    tf.audio.decode_wav does in the notebook. There's no mean/variance
+    normalisation: the notebook calculates it but never applies it to the model
+    input.
+  - Spectrogram: it uses a copy of the notebook's AudioPreprocessor wrapper for
+    the dylib. If you change that wrapper in the notebook, update this copy too.
+  - Quantisation: it's the same formula as the notebook, round(x / scale + zp),
+    but the result is also limited to the int8 range. Without that, a value
+    outside the range would wrap round (a very loud cell could come out very
+    negative). The clipped column counts how many of the 1,350 cells in each
+    window hit the limit. It's a quick way to spot whether the board mic is much
+    louder or quieter than the training data.
+  - Float model: kws_v7_float32_softmax.tflite works too; quantisation is
+    skipped for it.
+
+  Test results:
+  - Single "forward" clip, one window: both models gave forward. The int8 model
+    gave 0.648 and the float model 0.650, and the other probabilities were close
+    too, so quantisation is behaving.
+  - 4.5 s file (forward, stop, backward with 0.5 s of silence between each), 0.1
+    s stride: 36 windows, which is the expected (72000 − 16000)/1600 + 1. The
+    predicted labels follow the words through the file.
+  - Error cases: a WAV shorter than 1 s and a 44.1 kHz WAV both stop with a
+    clear message.
+
+  Worth knowing when you read the results:
+  - Partial words: windows holding only part of a word can be wrong with high
+    confidence. The final window (3.5–4.5 s, the end of "backward" plus silence)
+    came out as forward. The training clips have one word roughly centred in 1
+    s, so the model hasn't learned what a partial word looks like. For a sliding
+    window, the usual fix is to smooth over several windows or require a
+    probability threshold before accepting a keyword.
+  - Short trailing audio: anything after the last full window is ignored. This
+    is at most one stride's worth.
+
+  The test WAVs and CSVs are in the scratchpad, not the repo. Nothing is
+  committed.
+
+❯ Now I’d like you to write a python script to inspect the output of the tflite
+  run on the wav files. It should
+
+  - Visualize the output of the model, while playing back the audio from the
+  wav file so the user can check its results
+  - It should have someway of syncing up the playback of the audio to an
+  animated graph showing the output label of the model for that window
+  - I’m imagining a line graph, with x axis being time and y axis being output
+  label. With some sort of scrolling animation showing the current playback
+  time of the audio file. If animation is too complex, it could also just have
+  a window showing the current playback time
+
+  For now, just test it with data from speech commands dataset, passed through
+  the inference script.
+
+⏺ This is a separate script from last time, so I'll replace the plan file's
+  contents. First, a quick read-only check that the kws env has what a
+  matplotlib + sounddevice player needs, and which matplotlib backend it uses.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Everything needed is installed (matplotlib 3.10 on the native macosx backend,
+  sounddevice 0.5.6). There's one scope decision I'd like you to make before I
+  finish the plan.
+
+⏺ User answered Claude's questions:
+  ⎿  · To test with Speech Commands audio, I'll stitch random clips (keywords,
+     'other' words, noise, silence gaps) into one long WAV. Should that test-WAV
+     builder be kept in the repo, with the viewer showing the known true labels
+     alongside the predictions? → Repo + truth overlay (Recommended)
+
+⏺ You chose to keep the test-WAV builder in the repo and add the ground-truth
+  overlay. Next I'll check how the background-noise clips are stored so the
+  builder can sample them.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ I have what I need. Now I'll write the plan.
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to:
+     ~/.claude/plans/pasted-content-id-5903-i-d-like-lovely-kahan.md · /plan to
+     edit
+     Plan: results viewer with synced audio playback + Speech Commands test-WAV
+     builder
+
+     Context
+
+     HostSW/run_model_on_wav.py (done) writes one CSV row per 1 s sliding
+     window. Reading a CSV doesn't
+     tell you whether the model is right. You need to hear the audio and watch
+     the predictions
+     move with it. This adds:
+     1. HostSW/view_results.py: plays the WAV and animates the model output in
+        sync, with a
+        scrolling time axis and a playback cursor.
+     2. HostSW/make_test_wav.py: stitches random Speech Commands clips into one
+        long WAV and writes a
+        ground-truth CSV, which the viewer overlays so you can see right and
+        wrong predictions at a glance.
+        The user picked the repo + truth-overlay option over scratchpad-only.
+
+     Test flow: make_test_wav.py → run_model_on_wav.py → view_results.py.
+
+     Facts established
+
+     - kws env has matplotlib 3.10.9 (native macosx backend) and sounddevice
+       0.5.6.
+       receive_and_play.py already uses a sounddevice callback player (pattern
+       to follow).
+     - Results CSV header:
+       window,start_s,end_s,label_idx,label,p_<label>...,clipped. The viewer
+       reads label
+       names/order from the p_* columns, so nothing is hardcoded.
+     - Dataset (HostSW/dataset/): all clips are 16 kHz / 16-bit / mono, up to 1
+       s (some shorter).
+       Keyword dirs: forward, backward, stop. Background noise:
+       _background_noise_split_/*.wav
+       (1478 × 1 s clips, as used in training). 'other': every other word dir
+       (bed, bird, … wow).
+       Skip _background_noise_ (long originals) and non-dirs.
+     - Caveat: the notebook makes its own group split rather than using
+       testing_list.txt, so the
+       builder can't guarantee unseen clips. Test WAVs will read somewhat
+       optimistic. Say so in the
+       docstring.
+
+     1. HostSW/make_test_wav.py
+
+     Style matches receive_and_play.py (docstring with usage, argparse, stdlib
+     wave, numpy).
+     - CLI:
+       - -o/--output WAV path (required)
+       - -n/--num-clips (default 12)
+       - --gap MIN MAX silence between clips in seconds (default 0.5 1.5)
+       - --seed (default 0)
+       - --dataset (default <script dir>/dataset)
+     - For each clip: pick a class uniformly from the 5 training classes, then a
+       random file. 'other'
+       picks a random non-keyword word dir first. Leading silence = one gap,
+       then clip, gap, clip, …,
+       trailing gap.
+     - Writes the WAV and <output stem>_truth.csv with columns
+       start_s,end_s,label,file.
+       end_s = start + the clip's actual length.
+     - Prints a summary and the two follow-up commands (run model, view
+       results).
+
+     2. HostSW/view_results.py
+
+     - CLI:
+       - -w/--wav (required)
+       - -r/--results results CSV (default: WAV path with .csv suffix, same
+         default that
+         run_model_on_wav.py writes)
+       - -t/--truth truth CSV (optional; default: <wav stem>_truth.csv if it
+         exists)
+       - --span visible seconds (default 6)
+     - Loading: stdlib csv + numpy. A small local load_wav (int16 → float)
+       avoids importing
+       run_model_on_wav.py, which pulls in LiteRT at import time. It checks that
+       the WAV is 16-bit and
+       exits cleanly otherwise.
+     - Where each window is plotted: a window's prediction is plotted at its
+       centre (start_s + 0.5).
+       Training clips have the word roughly centred, so a correct detection
+       lines up with the word in the
+       waveform. The window start/end is still shown in the status text.
+     - Figure (ResultsView class, three rows sharing the x axis, time in s):
+       a. Waveform: min/max envelope per 10 ms bin (fast to draw). Truth spans
+          shaded, colour per class.
+       b. Predicted label: step(where='mid') of label_idx vs window centre. The
+          y axis is categorical
+          with tick labels = class names (the "line graph, x = time, y = label"
+          asked for). Each truth span
+          is drawn as a translucent band on its label's row, so a correct
+          prediction is the line running
+          through the band.
+       c. Per-class probabilities: one line per p_* column, legend, y range 0–1.
+       - A vertical playback cursor on all three axes.
+       - A status line (figure title): t = 2.34 s | window 1.80–2.80 s → stop
+         (p=0.91) | truth: stop,
+         taken from the window whose centre is nearest t.
+       - Help line at the bottom: space: pause/resume  ←/→: seek 1 s  click:
+         seek  home: restart.
+       - draw_at(t) moves the cursors, sets xlim = [t - span/2, t + span/2]
+         (scrolling, cursor centred)
+         and updates the status. It is kept separate from audio, so it can be
+         tested headless.
+     - Audio clock (Player): sd.OutputStream with a callback that copies from
+       the float signal at
+       self.pos and advances it. It outputs zeros when paused or at the end. The
+       playback time is
+       pos / sr - stream.latency, clamped to ≥ 0, so the cursor tracks what's
+       heard, not what has been
+       queued to the sound card. The audio callback therefore drives the clock.
+       The animation only reads
+       it, so the plot can't drift from the sound even if frames are dropped.
+       Seeking and pausing just set
+       pos / paused (single assignments, safe from the GIL's point of view).
+       This follows
+       ChunkPlayer in receive_and_play.py.
+     - Animation: FuncAnimation(fig, lambda _: view.draw_at(player.time()),
+       interval=33, cache_frame_data=False) at about 30 fps. blit=False, because
+       the scrolling x-limits need a full
+       redraw anyway. Key presses and clicks go through mpl_connect. Closing the
+       window stops and closes
+       the stream.
+
+     3. CLAUDE.md
+
+     In the Host Software section, add one line each for run_model_on_wav.py,
+     make_test_wav.py and
+     view_results.py. Also add the three-command test flow under Testing
+     Strategy.
+
+     Verification
+
+     All runs in the kws env. Artifacts go to the scratchpad.
+     1. make_test_wav.py -o <scratch>/sc_test.wav -n 12 --seed 0. Check that the
+        truth CSV has 12 rows,
+        the spans don't overlap, and the WAV duration equals the last end_s +
+        trailing gap.
+        Check that the seed gives the same output twice.
+     2. run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w
+        <scratch>/sc_test.wav.
+     3. Headless render: with MPLBACKEND=Agg, import view_results, build
+        ResultsView from the
+        files above, call draw_at(t) for a few times (start, mid-keyword, end),
+        and savefig PNGs.
+        Inspect them with Read to confirm the layout, truth bands, cursor,
+        scrolling window and status text.
+     4. Audio clock: run Player on a silent signal of the same length for about
+        2 s (so nothing
+        audible plays on the user's speakers). Check that time() advances at
+        about real time and that
+        pause/seek behave.
+     5. Interactive check is for the user. I can't see a live window or hear the
+        audio from here. The
+        final message gives the command:
+        python HostSW/view_results.py -w <scratch>/sc_test.wav.
+
+⏺ Plan approved. I'll start with the test-WAV builder.
+
+⏺ Write(HostSW/make_test_wav.py)
+  ⎿  Wrote 154 lines to HostSW/make_test_wav.py
+      1 """
+      2 Build a long test WAV from random Speech Commands clips, with a g
+      3 CSV, for checking the KWS model with run_model_on_wav.py and view
+        _results.py.
+      4
+        ted by random
+      6 silence gaps:
+      7   forward / backward / stop   from dataset/<keyword>/
+        t_/ (1 s clips)
+      9   other                       from a random non-keyword word dir
+     … +173 lines (ctrl+o to expand)
+
+⏺ Now the viewer.
+
+⏺ Write(HostSW/view_results.py)
+  ⎿  Wrote 322 lines to HostSW/view_results.py
+       1 """
+         del_on_wav.py,
+       3 so you can hear the audio and check the predictions against it.
+       4
+         :
+       6   1. waveform
+       8   3. per-class softmax probabilities
+       9 Each window's prediction is plotted at the window's centre (star
+         t + 0.5 s).
+         true clip
+     … +369 lines (ctrl+o to expand)
+⏺ Both scripts are written. Next I'll run the test flow: build a seeded test WAV
+  (twice, to check it's reproducible), then run the int8 model on it.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The builder is reproducible with a fixed seed, and the model ran over all 227
+  windows. Next is a headless render of the viewer at a few playback times, plus
+  one full-length overview.
+
+  Read 2 files, ran 1 shell command (ctrl+o to expand)
+
+⏺ The render is working correctly, but the legend is missing _background_noise_
+  since matplotlib hides entries starting with an underscore. I'll pass the
+  labels explicitly to the legend to fix this.
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 7 lines, removed 3 lines
+      144          self.ax_label.grid(axis="y", alpha=0.3)
+      145  
+      146          # 3. Per-class probabilities
+      147 -        for k, label in enumerate(results.labels):            
+      148 -            self.ax_prob.plot(self.centres, results.probs[:, k
+          -], color=colours[k], lw=1.2, label=label)                     
+      147 +        prob_lines = [                                        
+      148 +            self.ax_prob.plot(self.centres, results.probs[:, k
+          +], color=colours[k], lw=1.2)[0]                               
+      149 +            for k in range(n_labels)                          
+      150 +        ]                                                     
+      151          self.ax_prob.set_ylim(-0.02, 1.02)
+      152          self.ax_prob.set_ylabel("probability")
+      153          self.ax_prob.set_xlabel("time (s), windows plotted at 
+           their centre")
+      152 -        self.ax_prob.legend(loc="upper left", ncol=n_labels, f
+          -ontsize="small")                                              
+      154 +        # Labels passed explicitly: matplotlib hides auto-coll
+          +ected labels that                                             
+      155 +        # start with '_', which would drop '_background_noise_
+          +'                                                             
+      156 +        self.ax_prob.legend(prob_lines, results.labels, loc="u
+          +pper left", ncol=n_labels, fontsize="small")                  
+      157          self.ax_prob.grid(alpha=0.3)
+      158  
+      159          self.cursors = [
+
+⏺ Now I'll re-render to check the legend, and test the audio clock on a silent
+  signal so nothing plays through your speakers.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The clock correctly compensates for output latency while playing, but I found
+  that pausing or reaching the end leaves the displayed position 170 ms off
+  since the fixed latency correction doesn't apply once audio stops flowing.
+  I'll fix this by ramping the latency correction in/out over one latency period
+  instead of applying it instantly.
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 21 lines, removed 6 lines
+      207          self.pos = 0
+      208          self.paused = False
+      209          self.lock = threading.Lock()
+      210 +        # Whether the callback is feeding real audio, and when
+          + that last changed.                                           
+      211 +        # Starts as "feeding since long ago" so the stream sta
+          +rt uses the full latency.                                     
+      212 +        self.feeding = True                                   
+      213 +        self.feeding_changed_at = 0.0                         
+      214          self.stream = sd.OutputStream(
+      215              samplerate=sample_rate, channels=1, dtype="float32
+           ", callback=self._callback
+      216          )
+      217  
+      218      def _callback(self, outdata, frames, time_info, status):
+      219          with self.lock:
+      216 -            if self.paused:                                   
+      217 -                outdata.fill(0)                               
+      218 -                return                                        
+      219 -            chunk = self.signal[self.pos : self.pos + frames] 
+      220 +            chunk = self.signal[0:0] if self.paused else self.
+          +signal[self.pos : self.pos + frames]                          
+      221              self.pos += len(chunk)
+      222 +            if (len(chunk) > 0) != self.feeding:              
+      223 +                self.feeding = len(chunk) > 0                 
+      224 +                self.feeding_changed_at = time.monotonic()    
+      225          outdata[: len(chunk), 0] = chunk
+      226          outdata[len(chunk) :] = 0
+      227  
+     ...
+      230          return len(self.signal) / self.sample_rate
+      231  
+      232      def time(self):
+      229 -        """Playback time in seconds of the audio currently bei
+          -ng heard."""                                                  
+      230 -        t = self.pos / self.sample_rate - self.stream.latency 
+      233 +        """Playback time in seconds of the audio currently bei
+          +ng heard.                                                     
+      234 +                                                              
+      235 +        pos is what has been handed to the sound card; it is h
+          +eard stream.latency                                           
+      236 +        later. When feeding stops (pause / end) the already-qu
+          +eued audio still                                              
+      237 +        drains, so the lag shrinks to 0 over one latency perio
+          +d; when feeding                                               
+      238 +        resumes, the lag grows back while the queued silence d
+          +rains."""                                                     
+      239 +        latency = self.stream.latency                         
+      240 +        since_change = time.monotonic() - self.feeding_changed
+          +_at                                                           
+      241 +        if self.feeding:                                      
+      242 +            lag = min(latency, since_change)                  
+      243 +        else:                                                 
+      244 +            lag = max(0.0, latency - since_change)            
+      245 +        t = self.pos / self.sample_rate - lag                 
+      246          return min(max(t, 0.0), self.duration_s)
+      247  
+      248      def seek(self, t):
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 1 line
+      30  import pathlib
+      31  import sys
+      32  import threading
+      33 +import time                                                    
+      34  import wave
+      35  from dataclasses import dataclass
+      36  
+
+⏺ Next I'll rerun the silent clock test, sampling the cursor over time around
+  pause, resume and end-of-file.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Pause, resume, and end-of-file cases all now behave correctly. Next I'll check
+  the legend.
+
+  Read 1 file (ctrl+o to expand)
+
+⏺ The legend now shows all five classes. Last step from the plan is the
+  CLAUDE.md update.
+
+  Searched for 1 pattern, read 1 file (ctrl+o to expand)
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 3 lines
+       92  - **On-target audio check**: flash, run `python HostSW/receive
+           _and_play.py <serial-port>`
+       93    (e.g. `/dev/tty.usbmodem2021303`), listen
+       94  - **Model validation**: STM32Cube AI Studio validate using `Ho
+           stSW/TestDatasetST/*.npz`
+       95 +- **Model on long audio** (host, sliding window): `make_test_w
+          +av.py -o t.wav` (or a board capture via                       
+       96 +  `receive_and_play.py -o`) → `run_model_on_wav.py -m tflite_m
+          +odels/<model>.tflite -w t.wav` →                              
+       97 +  `view_results.py -w t.wav`                                  
+       98  
+       99  ## Host Software (`HostSW/`)
+      100  - `TrainModel.ipynb` (current, v7): Google Speech Commands v0.
+           02 → features → CNN → int8 PTQ →
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 4 lines
+      102    (`HostSW/build/.../libAudioPreprocessing.dylib`, built from 
+           `HostSW/CMakeLists.txt`), so training
+      103    features match the firmware.
+      104  - `receive_and_play.py`: UART audio receiver and playback (pys
+           erial, sounddevice, numpy)
+      105 +- `run_model_on_wav.py`: sliding 1 s window over a WAV → C pre
+          +processing dylib → quantise → tflite →                        
+      106 +  per-window CSV. Its `AudioPreprocessor` is a copy of the not
+          +ebook's; keep them in sync                                    
+      107 +- `make_test_wav.py`: stitches random Speech Commands clips in
+          +to a WAV + `<stem>_truth.csv`                                 
+      108 +- `view_results.py`: plays the WAV with the model output anima
+          +ted in sync (matplotlib, sounddevice)                         
+      109  - No requirements.txt. Main deps: tensorflow, tensorflow-io, a
+           i-edge-litert, optuna, numpy, pandas,
+      110    scikit-learn, matplotlib, seaborn, soundfile, pyserial, soun
+           ddevice
+      111  - Uses conda env "kws"
+
+⏺ I've written the viewer, HostSW/view_results.py, plus HostSW/make_test_wav.py,
+  which builds a test WAV from Speech Commands clips along with the true
+  labels. I checked the viewer's figure by rendering it to images, and checked
+  playback timing using silent audio. I haven't seen the live window or heard it
+  play, so that needs you:
+
+  conda activate kws
+  cd HostSW
+  python make_test_wav.py -o /tmp/sc_test.wav
+  python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w
+  /tmp/sc_test.wav
+  python view_results.py -w /tmp/sc_test.wav
+
+  What the viewer shows: three panels on the same scrolling 6 s time axis, with
+  a red cursor at the current playback time:
+  - Waveform: the true clip positions are shaded, one colour per class.
+  - Predicted label: a line with time along x and label along y. Each true clip
+    is drawn as a band on its correct label's row, so a correct prediction is
+    the line passing through the band.
+  - Probabilities: the softmax output for each class.
+
+  The title line shows the current time, the nearest window and its prediction,
+  and the true label. Space pauses and resumes, the arrow keys jump 1 s,
+  clicking a plot jumps there, and Home restarts. Each window's prediction is
+  plotted at its centre, because training clips have the word roughly centred.
+
+  How playback stays in sync: the audio output drives the clock and the
+  animation only reads it, so the plot can't drift from the sound. The cursor is
+  corrected for the sound card's output delay (170 ms on your "Shure 50"
+  device), so it follows what you actually hear.
+
+  Testing:
+  - Test WAV: a 23.6 s file of 12 clips, identical when rebuilt with the same
+    seed.
+  - Figure: I rendered it at several playback times and looked at the images.
+    That's how I found the probability legend was hiding _background_noise_
+    (matplotlib drops names starting with an underscore); it's fixed.
+  - Timing: with silent audio the cursor keeps real time. That testing found a
+    fault: pausing left the cursor 170 ms behind the last audio heard, and it
+    stopped 170 ms before the end of the file. I've fixed both, and it now holds
+    at the right spot on pause, carries on without a jump on resume, and
+    reaches the end.
+
+  What the test file shows about the model:
+  - Keywords: every keyword clip is found (see the full-length overview image).
+  - Gaps: the stretches between clips switch between other, _background_noise_
+    and stop at low confidence. The gaps are perfect digital silence, which the
+    model never saw in training, so this says more about the test file than
+    about the model.
+  - Partial words: windows at the edges of a word often briefly predict stop or
+    other. As with the last script, smoothing or a probability threshold is what
+    the firmware will eventually need.
+  - Optimistic results: the notebook makes its own train/test split, so these
+    clips may have been used in training. It's noted in the builder's docstring.
+
+  I also added the three scripts and the test commands to CLAUDE.md. Nothing is
+  committed, and the test files and rendered images are in the scratchpad.
+
+❯ <ide_opened_file>The user opened the file
+  /Users/gerald/SoftwareProjects/KeywordSpottingFWAI/HostSW/view_results.py in
+  the IDE. This may or may not be related to the current
+  task.</ide_opened_file>
+
+❯ I ran the scripts, but something seems broken with the view results script.
+  The viewer part works well, but the sound playback sounds very wrong. The
+  words are garbled, and maybe some of them get cut off early, though that's
+  hard to tell with the sound quality. Maybe the playback sample rate isn't
+  correct? Or something else is wrong with the playback
+
+⏺ I'll measure rather than guess. The two likeliest causes are a sample-rate
+  mismatch with your output device, or the audio callback being starved while
+  matplotlib redraws. The audio callback is Python code, so it needs the
+  interpreter lock, and the animation's redraw holds that lock. First, the
+  device's actual settings:
+
+  Ran 1 shell command (ctrl+o to expand)
+  ⎿  2 skills available
+
+⏺ The output device is Studio Display Speakers at 44.1 kHz, so sample rate
+  mismatch is unlikely to be the issue. Next, I'll test the starvation theory by
+  running the player on silent audio while redrawing the real figure at 2× DPI
+  to match Retina, counting sound card underflows.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The scratchpad was cleared since last session, so I'll regenerate the test
+  files first.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ Found it: each callback only gets 14 samples, forcing it to run ~1,150
+  times/sec, so figure redraws (32ms each) delay callbacks and drop ~20% of
+  audio without triggering underflow warnings — explaining the garbled playback.
+  I'll fix this by requesting larger blocks so the callback runs just 15-30
+  times/sec, and test different block sizes under the same drawing load.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Setting a fixed block size resolves the audio loss issue — I'll use 1024
+  samples (64 ms), since it comfortably covers the slowest redraw (43 ms) and
+  only adds latency already accounted for by the cursor correction.
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 7 lines
+      45  FRAME_INTERVAL_MS = 33  # ~30 fps
+      46  SEEK_STEP_S = 1.0
+      47  
+      48 +# Samples per audio callback. With the default (0, let the host
+         + choose), CoreAudio                                            
+      49 +# asks for ~14 samples per callback at 16 kHz, i.e. >1000 Pytho
+         +n callbacks/s. Each                                            
+      50 +# needs the GIL, which the main thread holds while matplotlib r
+         +edraws (~30-40 ms                                              
+      51 +# per frame), so callbacks are missed and ~20% of the audio is 
+         +dropped (garbled                                               
+      52 +# playback). 1024 samples = 64 ms per callback leaves plenty of
+         + headroom.                                                     
+      53 +AUDIO_BLOCKSIZE = 1024                                         
+      54 +                                                               
+      55  HELP_TEXT = "space: pause/resume    ←/→: seek 1 s    click: see
+          k    home: restart"
+      56  
+      57  
+
+⏺ Update(HostSW/view_results.py)  ⎿  Added 2 lines, removed 1 line
+      220          self.feeding = True
+      221          self.feeding_changed_at = 0.0
+      222          self.stream = sd.OutputStream(
+      223 -            samplerate=sample_rate, channels=1, dtype="float32
+          -", callback=self._callback                                    
+      223 +            samplerate=sample_rate, channels=1, dtype="float32
+          +", callback=self._callback,                                   
+      224 +            blocksize=AUDIO_BLOCKSIZE,                        
+      225          )
+      226  
+      227      def _callback(self, outdata, frames, time_info, status):
+
+⏺ The IDE warnings are mostly just the editor not pointing at the kws env, so it
+  can't see numpy or sounddevice—nothing to worry about there. I will fix one
+  real issue though: swapping the deprecated plt.get_cmap for the current
+  matplotlib.colormaps API.
+
+  Ran 2 shell commands (ctrl+o to expand)
+
+⏺ I've put in the fix, and now I'm checking that the real Player keeps up while
+  the figure redraws.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ I've fixed the playback. The sample rate was fine: the problem was that audio
+  was being dropped while the graph redrew. I can't hear it from here, so please
+  rerun view_results.py and tell me how it sounds.
+
+  Cause:
+  - Tiny audio blocks: the playback stream was asking macOS to pick the block
+    size, and it chose 14 samples (under 1 ms of audio at 16 kHz). That means
+    about 1,150 Python callbacks a second, each needing the Python interpreter
+    lock.
+  - Starved by redraws: while matplotlib redraws the figure (about 30–40 ms per
+    frame at Retina size), the main thread holds that lock, so callbacks were
+    missed.
+  - Result: with redraws running, only 3.23 s of audio was played in 4 s of real
+    time. About 20% of the samples were dropped in small pieces, which is what
+    made the words sound garbled. The missing bits also made words sound cut
+    off, and the cursor slowly fell behind. Nothing flagged it, because the
+    audio library didn't count those gaps as underflows.
+
+  Fix: the stream now uses fixed 1024-sample blocks (64 ms), set by
+  AUDIO_BLOCKSIZE in view_results.py (HostSW/view_results.py). The callback now
+  runs about 16 times a second, and one block outlasts the slowest redraw (43
+  ms). There's a comment above the constant explaining why. The extra latency is
+  about 60 ms, and the cursor already corrects for it.
+
+  Checked with the redraw load running, on silent audio:
+  - In 6.0 s of real time, 6.02 s of audio was played, where before about 20%
+    went missing.
+  - Pause holds the cursor still, and resume continues normally.
+  - Comparing block sizes: the default lost 0.77 s in 4 s, while 512, 1024 and
+    2048 all kept up.
+
+  My earlier test of the playback timing missed this because I ran it on silent
+  audio without the figure redrawing. Only the combination of the two drops
+  samples.
+
+  I also switched the colour map to matplotlib.colormaps["tab10"], the current
+  API; plt.get_cmap is the older call your editor flagged. The rest of the
+  editor's errors are about numpy and sounddevice not being found. They'll go
+  away if you set VS Code's Python interpreter to the kws conda env.
+
+  If you still hear dropouts, try raising AUDIO_BLOCKSIZE to 2048.
+
+❯ I
+  ⎿  2 skills available
+
+⏺ Your message came through as just "I", so it may have been cut off. What did
+  you want to say?
+
+  If it's about the playback fix: did the audio sound right after the block-size
+  change? If you still hear dropouts, I can raise AUDIO_BLOCKSIZE to 2048 or
+  look into it further.
+
+❯ The dropouts are fixed now.
+
+  I'm trying to run the scripts on audio I captured from the board, using the
+  receipe and play script. It's the capture.wav file. The run model on wav
+  script seemed to work, but the view results one is failing with this error:
+  python view_results.py -w capture.csv
+  Traceback (most recent call last):
+    File
+  "/Users/gerald/SoftwareProjects/KeywordSpottingFWAI/HostSW/view_results.py",
+  line 351, in <module>
+      main()
+    File
+  "/Users/gerald/SoftwareProjects/KeywordSpottingFWAI/HostSW/view_results.py",
+  line 304, in main
+      signal, sample_rate = load_wav(wav_path)
+    File
+  "/Users/gerald/SoftwareProjects/KeywordSpottingFWAI/HostSW/view_results.py",
+  line 74, in load_wav
+      with wave.open(str(path), "rb") as wav:
+    File "/Users/gerald/miniconda3/envs/kws/lib/python3.10/wave.py", line 509,
+  in open
+      return Wave_read(f)
+    File "/Users/gerald/miniconda3/envs/kws/lib/python3.10/wave.py", line 163,
+  in __init__
+      self.initfp(f)
+    File "/Users/gerald/miniconda3/envs/kws/lib/python3.10/wave.py", line 130,
+  in initfp
+      raise Error('file does not start with RIFF id')
+  wave.Error: file does not start with RIFF id
+  Could it be that the receive and play script isn't adding a correct wav
+  header to the file? Or something else
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The WAV header is fine. The problem is the command: it passed the results CSV
+  to -w, which expects the WAV file. Pass the WAV instead, and the viewer finds
+  the results CSV next to it on its own:
+
+  python view_results.py -w capture.wav
+
+  I checked capture.wav: it starts with RIFF and reads as 16 kHz, 16-bit, mono,
+  63 s long, so receive_and_play.py is writing it correctly. view_results.py
+  looks for capture.csv next to it, which is the file run_model_on_wav.py wrote.
+  There's no capture_truth.csv for a board recording, so the truth overlay is
+  left off.
+
+  wave.Error: file does not start with RIFF id isn't a clear way to report this
+  mix-up. If you'd like, I can make the viewer catch it and print something like
+  "capture.csv is not a WAV file (did you mean -w capture.wav?)".
+
+❯ that works now.
+
+  Looking at the results, it seems like the model is struggling with
+  distinguishing the keyword in the midst of regular speech. and that the
+  background noise detecting is also poor. I think this is likely a dataset
+  issue, as the google speech commands dataset is just single words on there
+  own. Can you help me come up with a plan to fix this issue, by improving my
+  dataset and maybe some data augmentation.
+
+  - Take a look at the results of capture.csv to see the issue. Capture.csv is
+  mostly me talking random sentences, interspersed with a few keywords, but the
+  model shows a constant mix of keywords and other.
+  - Look at what other people have done for embedded keyword spotting models
+  for this issue. are there other datasets to use that may help, or data
+  augmentation techniques
+  - is it worthwhile creating my own dataset with the mic on my board to
+  augment the pre made dataset(s). and what to focus on there if so
+  - any other strategies to try to improve the accuracy of my model and overall
+  application
+
+⏺ I'll start with your capture: the predictions, how confident they are, and
+  whether the board audio's level and spectrum resemble the training data.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ The timeline confirms the flickering issue—166 label changes in 62s as
+  predictions alternate between keywords and other. Before blaming the dataset
+  alone, I'll check whether the board mic differs from the training audio in
+  level, DC offset, noise floor, and spectral shape compared to Speech Commands
+  clips.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ I spotted two issues in the board audio: a large DC offset (−0.136 of full
+  scale) and a peak hitting exactly 1.000, which points to clipping. I'll dig
+  into both further since they'd feed the model audio different from what it was
+  trained on.
+
+  Ran 4 shell commands (ctrl+o to expand)
+
+⏺ Your capture is analysed, with some useful findings. Next I'll research what
+  other embedded KWS projects do about continuous speech and noise.
+
+⏺ Web Search("microWakeWord training negative datasets continuous speech false
+            accepts per hour augmentation")
+  ⎿  Did 1 search in 8s
+
+⏺ Web Search("openWakeWord training data negative speech datasets synthetic TTS
+            piper augmentation room impulse response")
+  ⎿  Did 1 search in 8s
+
+⏺ Web Search("TensorFlow micro_speech RecognizeCommands
+            average_window_duration_ms detection_threshold suppression_ms")
+  ⎿  Did 1 search in 5s
+
+⏺ Fetch(https://raw.githubusercontent.com/tensorflow/tflite-micro/main/tensorflo
+       w/lite/micro/examples/micro_speech/recognize_commands.h)
+  ⎿  Received 0 bytes (404 Not Found)
+
+⏺ Web Search("Multilingual Spoken Words Corpus keyword spotting dataset negative
+            samples LibriSpeech unknown class streaming KWS")
+  ⎿  Did 1 search in 6s
+
+⏺ Web Search("keyword spotting continuous speech false alarms 1 second window
+            training word fragments partial keywords time shift augmentation
+            streaming")
+  ⎿  Did 1 search in 8s
+
+⏺ Fetch(https://raw.githubusercontent.com/tensorflow/tensorflow/v2.4.0/tensorflo
+       w/lite/micro/examples/micro_speech/recognize_commands.h)
+  ⎿  Received 6KB (200 OK)
+
+⏺ Web Search("Hello Edge keyword spotting microcontrollers ARM background noise
+            augmentation time shift Speech Commands training settings")
+  ⎿  Did 1 search in 6s
+
+⏺ Web Search("Edge Impulse keyword spotting collect own data device microphone
+            noise unknown class recommendations")
+  ⎿  Did 1 search in 7s
+
+⏺ Fetch(https://raw.githubusercontent.com/tensorflow/tensorflow/v2.4.0/tensorflo
+       w/examples/speech_commands/train.py)  ⎿  Received 19.4KB (200 OK)
+
+⏺ I have enough research now. Before writing this up, I'll run a quick test
+  applying post-processing smoothing (like TF Micro's
+  RecognizeCommands—averaging over 1s, confidence thresholding, suppression) to
+  your existing capture.csv, to isolate how much smoothing alone can improve
+  things apart from retraining.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ I've analysed your capture, researched what other KWS projects do, and
+  simulated a smoothing fix. Here's what I found and the plan I'd suggest.
+
+  What capture.csv shows
+
+  - Speech gets classified as keywords: 245 of 621 windows (40%) have a keyword
+    as their top prediction, and the label changes 166 times in 62 s. The model
+    is unsure almost everywhere: the median top probability is only 0.45.
+  - Long silences are mostly handled correctly: the 10–20 s and 52–62 s pauses
+    come out as _background_noise_. What fails is the short gaps between words,
+    where most of each 1 s window is still speech.
+
+  I think there are four causes, roughly in order of impact:
+
+  1. The model has never seen continuous speech or partial words. Every training
+     example is one isolated word, roughly centred, surrounded by near-silence.
+     In your speech, a window holding the end of one word and the start of
+     another looks more like a keyword than anything it saw labelled other.
+     Also, other is cut down to 20% of the data, so the model rarely sees
+     non-keyword speech.
+  2. There's no augmentation. augment_clip() in the notebook does nothing, so
+     there's no time shift, no mixed-in noise and no gain variation.
+  3. The background class is mostly synthetic noise. 1,140 of the 1,478 clips
+     are blue, brown or violet noise at about −14 dBFS. There's no quiet room
+     tone, no background chatter or TV, and no music.
+  4. The board mic sounds different from the dataset:
+     - Its noise floor during pauses is about −45 dBFS, against about −65 dBFS
+       in Speech Commands clips.
+     - Your speech peaks about 8 dB quieter than the dataset (about −24 vs −15
+       dBFS).
+     - There's a large DC offset that drifts from −0.33 to −0.07 of full scale.
+       That's because the BSP leaves the ADF high-pass filter off
+       (HighPassFilter.Activation = DISABLE, b_u585i_iot02a_audio.c:427).
+
+     DC sits below the 125 Hz lowest mel filter, so it only slightly affects the
+     features. But it uses up headroom: 2 samples hit full scale and 22 went
+     past 0.9, all on the negative side.
+
+  A correction to what I said earlier: I told you there was no normalisation.
+  There is: it happens inside the C library, which subtracts LOG_MEL_MEAN and
+  divides by LOG_MEL_STDDEV. All the scripts call the library, so nothing
+  changes.
+
+  Smoothing alone helps, but isn't enough. I applied TF Micro-style
+  post-processing to your capture: average the outputs, require a threshold,
+  then ignore new detections for 1.5 s. With 0.5 s averaging and a 0.7
+  threshold, 245 keyword windows reduce to 12 detections:
+
+  ▎ 10.0 forward, 17.9 stop, 23.7 forward, 27.9 backward, 31.5 stop, 34.2
+  ▎ forward, 39.3 stop, 41.9 forward, 45.2 forward, 48.1 forward, 51.3 backward,
+  ▎ 54.1 forward
+
+  Could you tell me which of these were keywords you actually said? That gives
+  us a first measured baseline. Even unsmoothed, the model reaches 0.9+ on some
+  windows that are probably word fragments, so smoothing can't fix those.
+
+  What others do
+
+  - Google's Speech Commands training script (train.py
+    (https://raw.githubusercontent.com/tensorflow/tensorflow/v2.4.0/tensorflow/e
+    xamples/speech_commands/train.py)) mixes background noise into 80% of
+    samples at up to 0.1 volume. It shifts samples randomly by up to ±100 ms and
+    adds 10% silence and 10% unknown words. Your pipeline currently has none of
+    these.
+  - Wake-word projects built for streaming audio (microWakeWord
+    (https://docsearch.algolia.com/mcp/docs/repo/ohf-voice/micro-wake-word),
+    openWakeWord (https://github.com/alfiedennen/openwakeword-colab-2026)):
+    - They train on very large amounts of negative audio, about 2,000 hours of
+      general audio in openWakeWord's case.
+    - They use roughly 10–20 negative windows per positive.
+    - Augmentation includes room reverb (MIT room impulse responses), noise and
+      music from MUSAN, FSD50K and WHAM!, and pitch and speed changes.
+    - They add confusable words as extra negatives, and often use positive
+      samples generated with Piper text-to-speech.
+    - They measure false accepts per hour on long audio, not per-clip accuracy.
+    - The reason that metric matters: with 10 windows per second, even a 5%
+      per-window false-positive rate is about 1,800 false alarms an hour
+      (https://www.ioa.org.uk/system/files/publications/MJ%20CAREY%20ES%20PARRIS
+      %20IMPROVEMENTS%20TO%20A%20KEYWORD%20RECOGNITION%20ALGORITHM.pdf).
+  - TF Micro's RecognizeCommands (source
+    (https://raw.githubusercontent.com/tensorflow/tensorflow/v2.4.0/tensorflow/l
+    ite/micro/examples/micro_speech/recognize_commands.h)) averages outputs over
+    1000 ms, needs a score of 200/255 (about 0.78), suppresses repeats for 1500
+    ms and needs at least 3 results in the average.
+  - Datasets:
+    - For continuous speech: LibriSpeech (https://arxiv.org/pdf/2505.24820) (960
+      h).
+    - For many more isolated words: the Multilingual Spoken Words Corpus
+      (https://datasets-benchmarks-proceedings.neurips.cc/paper/2021/hash/fe131d
+      7f5a6b38b23cc967316c13dae2-Abstract-round2.html) (23 M one-second words).
+    - For noise: MUSAN, FSD50K or ESC-50.
+  - Edge Impulse recommends
+    (https://docs.edgeimpulse.com/docs/responding-to-your-voice) recording on
+    the target device itself, with at least 10 minutes per class including noise
+    and "unknown".
+
+  Is it worth recording your own data on the board?
+
+  Yes. Minute for minute, board recordings are your most valuable data, because
+  they're the only data with your mic's noise floor, level and DC behaviour. In
+  priority order:
+
+  1. Negatives: the cheapest and most useful. Use receive_and_play.py -o and
+     record long stretches of yourself talking or reading aloud, TV and
+     podcasts, music, typing, kitchen noise and plain room tone. No labelling is
+     needed, since every 1 s window is other or _background_noise_. Aim for
+     hours, not minutes.
+  2. Keywords in context. Say sentences like "go forward a bit" and "please
+     stop", as well as the keywords alone. Vary distance (0.3–2 m), loudness and
+     speed. These need timestamps; an Audacity label track exported to the
+     _truth.csv format works, and then view_results.py shows it as an overlay.
+  3. Other speakers if possible. Otherwise the model risks learning your voice;
+     Speech Commands still provides speaker variety.
+  4. A held-out test set. Keep some recording sessions out of training entirely
+     and use them for evaluation.
+
+  Suggested plan, cheapest first
+
+  0. Measure first. Record a labelled board evaluation set of about 5 minutes:
+     speech, occasional keywords and pauses. Then add a score_results.py that
+     reports keyword recall and false accepts per minute after smoothing. Every
+     later step is judged by these two numbers, not per-clip accuracy.
+  1. Add smoothing, a threshold and suppression to the host scripts, and tune
+     them on the evaluation set. The firmware will need the same logic later
+     anyway.
+  2. Add augmentation and better negatives in the notebook. I expect this to be
+     the biggest improvement.
+     - Time shift of ±100–200 ms.
+     - Partial-keyword negatives: windows where only a fragment of a keyword is
+       inside, labelled other. This targets the label flipping you're seeing
+       directly.
+     - 1 s crops of LibriSpeech, skipping utterances whose transcript contains a
+       keyword.
+     - Use far more of Speech Commands' other words, especially confusable ones
+       like follow and four. Weight the classes so keyword recall doesn't
+       collapse.
+     - Mix real noise into about 80% of samples at 0–20 dB SNR.
+     - Random gain of ±12 dB.
+     - Rebuild _background_noise_ around real noise and quiet room tone, with
+       less synthetic noise.
+     - Optionally, room reverb and SpecAugment.
+
+     All of this happens on the waveform before the C preprocessing, so the
+     ctypes pipeline stays as it is. To speed it up, run it across several
+     processes; each process loads its own copy of the library, so its internal
+     state isn't shared.
+  3. Add the board recordings from the previous section to training.
+  4. Remove the DC offset. Subtracting each frame's mean inside the C library
+     keeps firmware and training identical. You'll be retraining anyway; it does
+     mean regenerating the test vectors and re-running Ceedling.
+  5. Then the model. Find where the retrained model gives false keywords on
+     hours of negative audio, add those windows to training, and repeat. If the
+     harder data exceeds what the small 16/24/24 CNN can learn, try a slightly
+     larger model or a DS-CNN, the architecture from ARM's Hello Edge
+     (https://arxiv.org/abs/1711.07128v1) paper.
+
+  LibriSpeech, MUSAN and similar datasets are separate downloads, from hundreds
+  of MB to several GB, so I'd check with you before adding any of them. A good
+  starting point would be steps 0 and 1 (the scoring script and smoothing), then
+  the time-shift, noise and partial-keyword augmentation in the notebook.
+
+❯ <ide_opened_file>The user opened the file /Users/gerald/SoftwareProjects/Keyw
+  ordSpottingFWAI/Documentation/ImportantClaudeChats/HostTestingScripts.txt in
+  the IDE. This may or may not be related to the current
+  task.</ide_opened_file>
+
+❯ Let's come up with a plan to implement Step 0. I'm thinking this needs:
+
+  - Use the receive and play script to record the speech wav file
+  - Create a script that assists with the labelling, like view results script,
+  but that just shows the raw audio and plays it back, then has an easy way to
+  generate the labels and the timestamps of the keywords. Open to suggestions
+  here. Does it need to label timestamps for other and background noise, or
+  just start/end of keyword?
+  - create the score_results.py script. This should use some super simple
+  smoothing threshold and suppression to start, to be improved upon later
+
+⏺ I know the relevant code from the earlier scripts. Before writing the plan
+  I'll check one thing: how the repo currently handles WAV/CSV files in git.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ Two decisions shape the plan: how labelling works, and where the evaluation
+  recordings live.
+
+⏺ User answered Claude's questions:
+  ⎿  · How should keyword labelling work in the new labelling tool? → can you
+     explain what the audacity option is?
+     · Where should the labelled evaluation recordings (WAV + truth CSV, about
+     10 MB per 5 min) be kept? → Committed in repo (Recommended)
+
+⏺ Audacity offers a ready-made workflow for labeling keywords (select regions,
+  Ctrl+B to label, export as text), which a small script could then convert into
+  the truth CSV format—slower per keyword than a custom tool but requiring
+  almost no development. Both approaches take about 10-15 minutes for a 5-minute
+  recording with 30 keywords, so I'll weigh which fits better before
+  proceeding.
+
+⏺ User answered Claude's questions:
+  ⎿  · With that explained, which labelling approach do you want? → Audacity +
+     converter
+
+⏺ Updated plan
+  ⎿  /plan to preview
+
+⏺ User approved Claude's plan
+  ⎿  Plan saved to:
+     ~/.claude/plans/pasted-content-id-5903-i-d-like-lovely-kahan.md · /plan to
+     edit
+     Plan: Step 0: labelled board eval set + streaming score (recall / false
+     accepts)
+
+     Context
+
+     On board audio the model flip-flops between keywords and other during
+     continuous speech. Before
+     changing data or augmentation we need a fixed, labelled evaluation set
+     recorded on the board mic,
+     and a script that turns run_model_on_wav.py output into the two numbers
+     every later change is
+     judged by: keyword recall and false accepts per minute, after simple
+     smoothing, threshold
+     and suppression. Decisions so far:
+     - Labelling is done in Audacity, with a small converter script.
+     - Recordings are committed in HostSW/eval_recordings/.
+
+     Label policy: only keywords (plus an optional ignore)
+
+     - Label only keyword spans (forward, backward, stop). Everything unlabelled
+       counts as negative
+       audio. Scoring only asks two questions: was each keyword detected, and
+       did anything fire where no
+       keyword was said? So the other vs _background_noise_ split isn't needed
+       and won't be labelled.
+     - An extra ignore label marks audio that shouldn't count either way: a
+       cut-off keyword,
+       "stopped" / "forwards", coughs, or a keyword said by the TV. Detections
+       there count as neither
+       hits nor false accepts, and that time is excluded from the false-accept
+       minutes.
+     - A span is the audible word, start to end, as drawn in Audacity. It
+       doesn't need to be exact: the
+       matching tolerance is about 1 s.
+
+     1. Recording: HostSW/eval_recordings/README.md (protocol) +
+     receive_and_play.py -o
+
+     No code changes. The README gives the recording recipe and the labelling
+     steps:
+     - About 5 min per file, eval_<nn>_<desc>.wav. Target about 10 of each
+       keyword per file,
+       made up of:
+       - isolated keywords with pauses;
+       - keywords inside sentences ("go forward a bit", "please stop there");
+       - fast and slow speech, and distances of 0.3, 1 and 2 m;
+       - confusable non-keywords ("four", "follow", "top", "back", "forwarding";
+         label variants like
+         these as ignore only when they really are ambiguous);
+       - about 30 s of room tone;
+       - about 1 min with TV or music playing.
+     - Keep the files as a held-out test set: never train on them. Later
+       training recordings go
+       elsewhere.
+     - The existing HostSW/capture.wav can become eval_01_speech.wav once it's
+       labelled.
+
+     2. Labelling: Audacity + HostSW/audacity_labels_to_truth.py
+
+     - README steps:
+       a. Open the WAV in Audacity. Optionally use the spectrogram view (track
+          menu → Spectrogram).
+       b. Select a word and press Cmd+B, then type the label.
+       c. File → Export → Export Labels → <stem>_labels.txt.
+       d. Run the converter.
+       e. To edit later: File → Import → Labels.
+     - Converter CLI: -i labels.txt (required); -o (default <wav
+       stem>_truth.csv, derived from
+       labels.txt by replacing a _labels suffix); --reverse (truth CSV →
+       Audacity labels, so
+       make_test_wav.py truth files can be opened in Audacity too).
+     - Parsing:
+       - Each line is start\tend\tlabel.
+       - Skip lines starting with \ (Audacity's spectral-selection lines) and
+         blank lines.
+       - Strip and lower-case labels. Exit with an error listing the line number
+         for any label not in
+         {forward, backward, stop, ignore}.
+       - Warn about zero-length or overlapping spans.
+       - Sort by start time.
+     - Output: the same start_s,end_s,label,file header as make_test_wav.py. The
+       file column
+       is left empty, so view_results.py's truth overlay works unchanged.
+
+     3. HostSW/score_results.py
+
+     - CLI:
+       - -r results.csv (required);
+       - -t truth.csv (default <results stem>_truth.csv);
+       - --avg 0.5 (smoothing window, s);
+       - --threshold 0.7;
+       - --suppress 1.5 (s);
+       - --tolerance (default 1.0 + avg, s);
+       - --sweep (threshold table);
+       - -o detections CSV (default <results stem>_detections.csv).
+     - detect(results, avg_s, threshold, suppress_s) is a pure function so it's
+       easy to reuse
+       and port to firmware later:
+       - Causal moving average of the probability vectors over the last N =
+         round(avg_s / stride)
+         windows, the way the device would compute it. Needs at least min(3, N)
+         windows, as in TF
+         Micro's RecognizeCommands.
+       - Fires at window i if the top smoothed class is a keyword, its smoothed
+         probability is
+         ≥ threshold, and at least suppress_s has passed since the last firing.
+       - Detection time = window i's end_s, the moment the device would actually
+         have that audio.
+     - Matching:
+       - A detection of label L hits a truth span (s, e, L) if s ≤ t ≤ e +
+         tolerance. The window
+         must end after the word starts, and the word must still be in the
+         window, plus the averaging
+         lag.
+       - Each span is hit at most once. Later matches of the same span are
+         duplicates, counted as
+         false accepts but listed separately.
+       - A detection that falls in a span with a different keyword is a
+         substitution, counted
+         as a false accept.
+       - A detection matching an ignore span is dropped.
+     - Report:
+       - Settings used.
+       - Per-keyword and overall recall (hits / spans).
+       - False accepts (total, plus how many were substitutions or duplicates),
+         per minute and per
+         hour. The negative time is the results' audio duration minus keyword
+         and ignore spans.
+       - Lists of misses (span times) and false accepts (time, label, smoothed
+         p), so you can
+         jump to them in the viewer.
+       - --sweep prints recall and false accepts per minute for thresholds
+         0.50–0.95 in steps of
+         0.05, at the given avg and suppress.
+     - Detections CSV: time_s, label, p, outcome (hit / false_accept /
+       substitution / duplicate /
+       ignored).
+
+     4. Small view_results.py changes
+
+     - Truth label ignore: shade it grey on the waveform only. Currently it
+       would print the
+       "not a model label" warning.
+     - Detections: optional -d detections.csv (default <wav stem>_detections.csv
+       if it exists).
+       Draw a marker per detection on the label panel at time_s, green for a hit
+       and red otherwise,
+       so smoothed detections can be seen while listening.
+
+     5. CLAUDE.md
+
+     Add the converter and score_results.py to the Host Software list. Extend
+     the "Model on long
+     audio" test flow with the eval-set steps (label in Audacity → convert → run
+     model → score → view).
+
+     Verification
+
+     In the kws env, with artifacts in the scratchpad:
+     1. Matching logic: a hand-made results CSV plus truth CSV covering one hit,
+        one miss, one
+        substitution, one duplicate (suppress set short), one detection in an
+        ignore span and one
+        false accept in silence. Check every count and outcome in the report.
+     2. End to end on synthetic data: make_test_wav.py → run_model_on_wav.py →
+        score_results.py (with --sweep). Its truth includes other /
+        _background_noise_ rows;
+        the scorer treats any non-keyword truth label as negative audio (not an
+        error). Recall should
+        be high, since these are training-like clips.
+     3. Converter round trip: truth → --reverse → Audacity labels → truth is
+        identical. A label
+        file with a typo is rejected with its line number. Spectral-selection \
+        lines are skipped.
+     4. Viewer: a headless render with detections and an ignore span; inspect
+        the PNG.
+     5. User: label capture.wav in Audacity, then run convert → score → view on
+        it. This is the
+        first real baseline (the smoothing preview found 12 detections at avg
+        0.5 / threshold 0.7).
+
+⏺ I'll start with the Audacity converter.
+
+⏺ Write(HostSW/audacity_labels_to_truth.py)
+  ⎿  Wrote 131 lines to HostSW/audacity_labels_to_truth.py
+       1 """
+       2 Convert an Audacity label export to the ground-truth CSV used by
+         rse).
+       4
+       5 Audacity labels (File > Export > Export Labels) are tab-separate
+       6     start_s <TAB> end_s <TAB> label
+       7 Lines starting with '\\' hold the spectral selection of the labe
+         l above and
+       9
+      10 Truth CSV (same format as make_test_wav.py writes):
+     … +145 lines (ctrl+o to expand)
+
+⏺ Next, the scorer.
+
+⏺ Write(HostSW/score_results.py)
+  ⎿  Wrote 248 lines to HostSW/score_results.py
+       1 """
+          way a
+       3 streaming keyword spotter would be used: smooth the per-window o
+       4 a detection when a keyword is confident enough, then suppress re
+         peats.
+       6 Reports keyword recall and false accepts per minute of non-keywo
+         rd audio,
+       8
+       9 Detection (detect(), deliberately simple, to be improved later):
+         -avg seconds
+     … +303 lines (ctrl+o to expand)
+
+⏺ Now the viewer changes. I'll re-read the relevant parts first, since the file
+  has changed since I wrote it.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 7 lines, removed 3 lines
+       7    2. predicted label per window (y axis = class name)
+       8    3. per-class softmax probabilities
+       9  Each window's prediction is plotted at the window's centre (sta
+          rt + 0.5 s).
+      10 -If a ground-truth CSV is available (from make_test_wav.py), the
+         - true clip                                                     
+      11 -spans are shaded on the waveform and drawn as a band on the tru
+         -e label's row,                                                 
+      12 -so a correct prediction is the line running through the band.  
+      10 +If a ground-truth CSV is available (from make_test_wav.py or   
+      11 +audacity_labels_to_truth.py), the true clip spans are shaded on
+         + the waveform                                                  
+      12 +and drawn as a band on the true label's row, so a correct predi
+         +ction is the                                                   
+      13 +line running through the band. 'ignore' spans are shaded grey o
+         +n the waveform.                                                
+      14 +If a detections CSV is available (from score_results.py), each 
+         +smoothed                                                       
+      15 +detection is drawn as a triangle on its label's row: green for 
+         +a hit, red for                                                 
+      16 +a false accept / substitution / duplicate, grey if inside an 'i
+         +gnore' span.                                                   
+      17  
+      18  Sync: the sounddevice output callback advances the playback pos
+          ition, and the
+      19  animation just reads it (minus the output latency), so the curs
+          or follows what
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 2 lines, removed 2 lines
+      22  Controls: space pause/resume, left/right seek 1 s, click a plot
+           to seek, home restart.
+      23  
+      24  Usage:
+      25 -    python view_results.py -w capture.wav                     #
+         - reads capture.csv (+ capture_truth.csv if present)            
+      26 -    python view_results.py -w capture.wav -r results.csv -t tru
+         -th.csv --span 10                                               
+      25 +    python view_results.py -w capture.wav     # reads capture.c
+         +sv (+ capture_truth.csv, capture_detections.csv if present)    
+      26 +    python view_results.py -w capture.wav -r results.csv -t tru
+         +th.csv -d detections.csv --span 10                             
+      27  
+      28  Requirements:
+      29      pip install numpy matplotlib sounddevice
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 3 lines
+      59  
+      60  HELP_TEXT = "space: pause/resume    ←/→: seek 1 s    click: see
+          k    home: restart"
+      61  
+      62 +IGNORE_LABEL = "ignore"                                        
+      63 +DETECTION_COLOURS = {"hit": "tab:green", "ignored": "0.6"}   # 
+         +anything else: false accept (red)                              
+      64  
+      65 +                                                               
+      66  @dataclass
+      67  class Results:
+      68      labels: list          # class names, in model output order
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 6 lines
+      111          return [(float(r["start_s"]), float(r["end_s"]), r["la
+           bel"]) for r in csv.DictReader(f)]
+      112  
+      113  
+      114 +def load_detections(path):                                    
+      115 +    """Returns a list of (time_s, label, outcome)."""         
+      116 +    with open(path, newline="") as f:                         
+      117 +        return [(float(r["time_s"]), r["label"], r["outcome"])
+          + for r in csv.DictReader(f)]                                  
+      118 +                                                              
+      119 +                                                              
+      120  class ResultsView:
+      121      """The figure. draw_at(t) updates it for playback time t; 
+           it knows nothing
+      122      about audio, so it can be driven by the player or rendered
+            headless."""
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 1 line, removed 1 line
+      121      """The figure. draw_at(t) updates it for playback time t; 
+           it knows nothing
+      122      about audio, so it can be driven by the player or rendered
+            headless."""
+      123  
+      124 -    def __init__(self, signal, sample_rate, results, truth=Non
+          -e, span_s=6.0):                                               
+      124 +    def __init__(self, signal, sample_rate, results, truth=Non
+          +e, span_s=6.0, detections=None):                              
+      125          self.results = results
+      126          self.truth = truth or []
+      127          self.span_s = span_s
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 3 lines
+      147  
+      148          # 2. Predicted label, with truth bands on each clip's 
+           true-label row
+      149          for start_s, end_s, label in self.truth:
+      150 +            if label == IGNORE_LABEL:                         
+      151 +                self.ax_wave.axvspan(start_s, end_s, color="0.
+          +5", alpha=0.25, lw=0)                                         
+      152 +                continue                                      
+      153              if label not in results.labels:
+      154                  print(f"[warn] truth label '{label}' is not a 
+           model label, not drawn")
+      155                  continue
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 7 lines
+      163              self.centres, results.label_idx, s=12, zorder=3,
+      164              c=[colours[k] for k in results.label_idx],
+      165          )
+      166 +        dets = [d for d in (detections or []) if d[1] in resul
+          +ts.labels]                                                    
+      167 +        if dets:                                              
+      168 +            self.ax_label.scatter(                            
+      169 +                [t for t, _, _ in dets], [results.labels.index
+          +(label) for _, label, _ in dets],                             
+      170 +                marker="v", s=110, zorder=4, edgecolors="k", l
+          +inewidths=0.8,                                                
+      171 +                c=[DETECTION_COLOURS.get(outcome, "tab:red") f
+          +or _, _, outcome in dets],                                    
+      172 +            )                                                 
+      173          self.ax_label.set_yticks(range(n_labels), results.labe
+           ls)
+      174          self.ax_label.set_ylim(n_labels - 0.5, -0.5)   # first
+            label at the top
+      175          self.ax_label.set_ylabel("predicted label")
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 4 lines
+      309          "-t", "--truth",
+      310          help="ground-truth CSV from make_test_wav.py (default:
+            <wav stem>_truth.csv if it exists)",
+      311      )
+      312 +    parser.add_argument(                                      
+      313 +        "-d", "--detections",                                 
+      314 +        help="detections CSV from score_results.py (default: <
+          +wav stem>_detections.csv if it exists)",                      
+      315 +    )                                                         
+      316      parser.add_argument("--span", type=float, default=6.0, hel
+           p="visible seconds (default: 6)")
+      317      return parser.parse_args()
+      318  
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 9 lines, removed 1 line
+      328      elif wav_path.with_name(wav_path.stem + "_truth.csv").exis
+           ts():
+      329          truth_path = wav_path.with_name(wav_path.stem + "_trut
+           h.csv")
+      330  
+      331 +    detections_path = None                                    
+      332 +    if args.detections:                                       
+      333 +        detections_path = pathlib.Path(args.detections)       
+      334 +    elif wav_path.with_name(wav_path.stem + "_detections.csv")
+          +.exists():                                                    
+      335 +        detections_path = wav_path.with_name(wav_path.stem + "
+          +_detections.csv")                                             
+      336 +                                                              
+      337      signal, sample_rate = load_wav(wav_path)
+      338      results = load_results(results_path)
+      339      truth = load_truth(truth_path) if truth_path else None
+      340 +    detections = load_detections(detections_path) if detection
+          +s_path else None                                              
+      341      print(f"WAV {wav_path} ({len(signal) / sample_rate:.2f}s),
+            results {results_path} ({len(results.start_s)} windows)"
+      335 -          + (f", truth {truth_path}" if truth_path else ""))  
+      342 +          + (f", truth {truth_path}" if truth_path else "")   
+      343 +          + (f", detections {detections_path}" if detections_p
+          +ath else ""))                                                 
+      344  
+      345      # Free up keys that matplotlib binds to its own navigation
+            by default
+      346      for keymap, keys in (("keymap.back", ["left"]), ("keymap.f
+           orward", ["right"]), ("keymap.home", ["home"])):
+
+⏺ Update(HostSW/view_results.py)
+  ⎿  Added 1 line, removed 1 line
+      346      for keymap, keys in (("keymap.back", ["left"]), ("keymap.f
+           orward", ["right"]), ("keymap.home", ["home"])):
+      347          plt.rcParams[keymap] = [k for k in plt.rcParams[keymap
+           ] if k not in keys]
+      348  
+      349 -    view = ResultsView(signal, sample_rate, results, truth, sp
+          -an_s=args.span)                                               
+      349 +    view = ResultsView(signal, sample_rate, results, truth, sp
+          +an_s=args.span, detections=detections)                        
+      350      player = Player(signal, sample_rate)
+      351  
+      352      def on_key(event):
+
+⏺ Now the eval-recordings README.
+
+⏺ Write(HostSW/eval_recordings/README.md)
+  ⎿  Wrote 67 lines to HostSW/eval_recordings/README.md
+       1 # Board-mic evaluation recordings
+       2
+         to measure **keyword recall** and
+       4 **false accepts per minute** on realistic, continuous audio.
+       5
+         re else, or the scores stop meaning
+       7 anything.
+       8
+      10 - `eval_<nn>_<desc>.wav`: 16 kHz, 16-bit mono, from `receive_and
+         _play.py -o`
+     … +85 lines (ctrl+o to expand)
+
+⏺ I'll add a .gitignore so only WAVs, truth CSVs, and label files get committed,
+  then start testing with a hand-built case where every outcome is known in
+  advance.
+
+⏺ Bash(printf '# Generated per model/settings (run_model_on_wav.py,
+      score_results.py); only labels are committed\n*.csv\n!*_truth.csv\n' >
+      /Users/gerald/SoftwareProjec…)
+  ⎿  chpwd:1: command not found: _virtualenv_auto_activate
+     Results hand.csv (211 windows, 22.0s), truth hand_truth.csv
+     Settings: avg 0.1s, threshold 0.7, suppress 0.5s, tolerance 1.1s
+     … +27 lines (ctrl+o to expand)
+  ⎿  Shell cwd was reset to
+     /Users/gerald/SoftwareProjects/KeywordSpottingFWAI
+  ⎿  Created HostSW/eval_recordings/.gitignore (+3 -0)
+      1 +# Generated per model/settings (run_model_on_wav.py, score_resul
+        +ts.py); only labels are committed                               
+      2 +*.csv                                                           
+      3 +!*_truth.csv                                                    
+  ⎿  (files that changed while this command ran, by the command or by
+     another process; a convenience view, not a review or audit of the
+     command)
+
+⏺ Every count and outcome matches what I built the case to produce. Next:
+  end-to-end on a synthetic WAV, the converter round trip, and the converter's
+  error handling.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ All checks pass, with the synthetic file scoring 79% recall and zero false
+  accepts, as expected for isolated, training-like clips. Last step: rendering a
+  headless view of the viewer showing detections and an ignore span.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ The render checks out — green for the hit at 5.7s, red for the false accept,
+  grey for the detection in the ignore span plus its shading on the waveform.
+  Now I'll update CLAUDE.md.
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 3 lines
+      100  - **Model on long audio** (host, sliding window): `make_test_w
+           av.py -o t.wav` (or a board capture via
+      101    `receive_and_play.py -o`) → `run_model_on_wav.py -m tflite_m
+           odels/<model>.tflite -w t.wav` →
+      102    `view_results.py -w t.wav`
+      103 +- **Board eval set** (`HostSW/eval_recordings/`, held out, nev
+          +er train on it; see its README): record with                  
+      104 +  `receive_and_play.py -o`, label keywords (+ `ignore`) in Aud
+          +acity → `audacity_labels_to_truth.py` →                       
+      105 +  `run_model_on_wav.py` → `score_results.py --sweep` (keyword 
+          +recall, false accepts/min) → `view_results.py`                
+      106  
+      107  ## Host Software (`HostSW/`)
+      108  - `TrainModel.ipynb` (current, v7): Google Speech Commands v0.
+           02 → features → CNN → int8 PTQ →
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 3 lines
+      114    per-window CSV. Its `AudioPreprocessor` is a copy of the not
+           ebook's; keep them in sync
+      115  - `make_test_wav.py`: stitches random Speech Commands clips in
+           to a WAV + `<stem>_truth.csv`
+      116  - `view_results.py`: plays the WAV with the model output anima
+           ted in sync (matplotlib, sounddevice)
+      117 +- `audacity_labels_to_truth.py`: Audacity label export ↔ `<ste
+          +m>_truth.csv`                                                 
+      118 +- `score_results.py`: smoothing + threshold + suppression (`de
+          +tect()`) over a results CSV, matched                          
+      119 +  against truth → recall and false accepts/min, `<stem>_detect
+          +ions.csv` for the viewer                                      
+      120  - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna
+           , numpy, pandas,
+      121    scikit-learn, matplotlib, seaborn, soundfile, pyserial, soun
+           ddevice
+      122  - Uses conda env "kws", pinned in `HostSW/environment.yml` (Py
+           thon 3.10 from conda, all else pip).
+
+⏺ Step 0 is built and tested, apart from labelling your real recording, which
+  needs you in Audacity.
+
+  What's new:
+  - HostSW/eval_recordings/README.md covers what to record, how to label in
+    Audacity and the commands to run. A .gitignore in that folder means only the
+    WAVs, _truth.csv and _labels.txt files get committed; the results and
+    detections CSVs are regenerated from those.
+  - audacity_labels_to_truth.py (HostSW/audacity_labels_to_truth.py) converts an
+    Audacity label export into the _truth.csv format. --reverse converts the
+    other way, so you can reopen and edit labels later.
+    - Errors: a label with a typo, or an unreadable time, stops the conversion
+      and reports the line number.
+    - Warnings: spans with no length, and spans that overlap, are reported but
+      still converted.
+    - Lines skipped: the extra frequency lines Audacity adds when a label has a
+      spectral selection.
+    - Difference from the plan: besides forward, backward, stop and ignore, it
+      also accepts other and _background_noise_. Without that, the truth files
+      make_test_wav.py writes couldn't be converted and back. The scorer treats
+      both as non-keyword audio.
+  - score_results.py (HostSW/score_results.py) works like this:
+    - Detection, in detect(): averages the model outputs over the last 0.5 s and
+      fires when a keyword's average reaches 0.7. It then ignores new
+      detections for 1.5 s. A detection's time is the end of the newest window,
+      which is when the board would actually have that audio.
+    - Report: recall per keyword, false accepts per minute and per hour, and the
+      time of every miss and false accept.
+    - --sweep: adds a table of recall and false accepts for thresholds from 0.50
+      to 0.95.
+    - Output for the viewer: it writes <stem>_detections.csv.
+  - view_results.py (HostSW/view_results.py) draws each detection as a triangle:
+    green for a hit, red for a false accept and grey for one inside an ignore
+    span. ignore spans are shaded grey on the waveform. Triangles sit at the
+    moment of detection, so they appear about 0.5–1 s after the word in the
+    plot.
+  - CLAUDE.md now lists the two new scripts and the eval-set workflow.
+
+  Testing:
+  - Hand-built case: the hit, miss, substitution, duplicate, detection in an
+    ignore span and false accept all came out as intended, and the false-accept
+    rate was correct (3 false accepts over 0.33 min of non-keyword audio = 9.09
+    per minute).
+  - Synthetic 61 s Speech Commands file: 79% recall with no false accepts.
+    That's what you'd expect for isolated, training-like clips. The sweep shows
+    recall falling from 86% at 0.50 to 29% at 0.95.
+  - Converter: truth → Audacity labels → truth gives an identical file, and the
+    error cases behave as described.
+  - Viewer: I rendered it headless and checked the image.
+
+  Your next step is a first real baseline. Move capture.wav into
+  HostSW/eval_recordings/ as eval_01_speech.wav and label it in Audacity (README
+  step 2). Then:
+
+  cd HostSW
+  python audacity_labels_to_truth.py -i
+  eval_recordings/eval_01_speech_labels.txt
+  python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w
+  eval_recordings/eval_01_speech.wav
+  python score_results.py -r eval_recordings/eval_01_speech.csv --sweep
+  python view_results.py -w eval_recordings/eval_01_speech.wav
+
+  Nothing is committed.
+
+❯ Can you make a simple way to run these 3 scripts at once, since there is not
+  user input needed for those steps:
+
+  python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w
+  eval_recordings/eval_01_speech.wav
+  python score_results.py -r eval_recordings/eval_01_speech.csv --sweep
+  python view_results.py -w eval_recordings/eval_01_speech.wav
+
+  Also, can you verify that the make test wav script is actually working
+  correctly. I thought I noticed some words getting cut off when listening back
+  in the view results viewer. Maybe generate some wav files and ensure all the
+  word clips match the words drawn from the dataset
+
+⏺ I'll check make_test_wav.py first. For several seeds, I'll compare every span
+  in the truth CSV sample-for-sample with its source clip, and check the gaps
+  are pure silence.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ I think the mismatches stem from truth times being rounded to 4 decimals,
+  coarser than one sample. I'll check each clip's actual offset to confirm.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ All 200 clips are intact in the WAV—the ground-truth timestamp offsets are
+  just sub-millisecond rounding artifacts, so make_test_wav.py isn't truncating
+  words. Next I'll check whether the Speech Commands dataset itself clips words
+  at the file edges, and how often that happens.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ "Loud at the edge" can also just mean a noisy clip, so I'll tighten the check.
+  A cut word should be loud at the edge and also well above the clip's own
+  quietest part.
+
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ About 16% of forward and backward clips appear cut off at the end, likely
+  because the 1s clip length is too short for these longer two-syllable words.
+  I'll plot a few flagged clips to confirm visually.
+
+  Read 1 file, ran 1 shell command (ctrl+o to expand)
+
+⏺ The plots confirm these clips are truncated in the original dataset itself —
+  e.g. one word starts at 0.95s so only a fragment is captured — and since my
+  script copies clips exactly, this is genuine dataset audio, not a bug. I'll
+  fix the timestamp precision and move on to writing the pipeline runner.
+
+  Searched for 1 pattern (ctrl+o to expand)
+
+⏺ Update(HostSW/make_test_wav.py)
+  ⎿  Added 2 lines, removed 1 line
+      138          writer = csv.writer(f)
+      139          writer.writerow(["start_s", "end_s", "label", "file"])
+      140          for start_s, end_s, label, file in truth:
+      141 -            writer.writerow([f"{start_s:.4f}", f"{end_s:.4f}",
+          - label, file])                                                
+      141 +            # 6 dp so times are sample-exact (1 sample = 62.5 
+          +us at 16 kHz)                                                 
+      142 +            writer.writerow([f"{start_s:.6f}", f"{end_s:.6f}",
+          + label, file])                                                
+      143  
+      144      print(f"Wrote {wav_path} ({len(signal) / SAMPLE_RATE_HZ:.2
+           f}s, {args.num_clips} clips)")
+      145      print(f"Wrote {truth_path}")
+
+⏺ Write(HostSW/eval_wav.py)
+  ⎿  Wrote 79 lines to HostSW/eval_wav.py
+      1 """
+      2 Run the whole host evaluation on one WAV in one go:
+        m>.csv
+      4   2. score_results.py      recall / false accepts     -> <wav ste
+        m>_detections.csv
+        h.csv)
+      6   3. view_results.py       playback + animated results
+      7
+        e Python
+      9 interpreter as this one, so run it from the kws env.
+     … +94 lines (ctrl+o to expand)
+
+⏺ Next I'll verify both: rerun the exact-match check with the new precision, and
+  run the pipeline from a different directory, plus its no-truth and failure
+  paths.
+  Ran 1 shell command (ctrl+o to expand)
+
+⏺ All checks pass — the exit 0 just reflects tail's status, while the script
+  itself still exits with an error code on failure. Now I'll update CLAUDE.md
+  and the eval README to reference the new runner.
+
+⏺ Update(HostSW/eval_recordings/README.md)
+  ⎿  Added 7 lines
+      55  
+      56  ## 3. Run the model, score it, look at the results
+      57  
+      58 +All three steps in one command (options: `-m` model, `--thresho
+         +ld`/`--avg`/`--suppress`, `--no-view`):                        
+      59  ```
+      60  cd HostSW
+      61 +python eval_wav.py -w eval_recordings/eval_02_kitchen.wav      
+      62 +```                                                            
+      63 +                                                               
+      64 +Or step by step:                                               
+      65 +```                                                            
+      66 +cd HostSW                                                      
+      67  python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax
+          .tflite -w eval_recordings/eval_02_kitchen.wav
+      68  python score_results.py -r eval_recordings/eval_02_kitchen.csv 
+          --sweep
+      69  python view_results.py -w eval_recordings/eval_02_kitchen.wav
+
+⏺ Update(CLAUDE.md)
+  ⎿  Added 2 lines, removed 1 line
+      102    `view_results.py -w t.wav`
+      103  - **Board eval set** (`HostSW/eval_recordings/`, held out, nev
+           er train on it; see its README): record with
+      104    `receive_and_play.py -o`, label keywords (+ `ignore`) in Aud
+           acity → `audacity_labels_to_truth.py` →
+      105 -  `run_model_on_wav.py` → `score_results.py --sweep` (keyword 
+          -recall, false accepts/min) → `view_results.py`                
+      105 +  `run_model_on_wav.py` → `score_results.py --sweep` (keyword 
+          +recall, false accepts/min) → `view_results.py`.               
+      106 +  `eval_wav.py -w <wav>` runs those last three steps in one go
+      107  
+      108  ## Host Software (`HostSW/`)
+      109  - `TrainModel.ipynb` (current, v7): Google Speech Commands v0.
+           02 → features → CNN → int8 PTQ →
+
+⏺ The three steps now run as one command. make_test_wav.py isn't cutting words;
+  the cut-off words you heard are in the Speech Commands clips themselves.
+
+  One command for all three steps: HostSW/eval_wav.py
+
+  python eval_wav.py -w eval_recordings/eval_01_speech.wav
+
+  - Defaults: it uses the v7 int8 model; -m picks another. You can pass
+    --threshold, --avg, --suppress, --no-sweep and --no-view through to the
+    scoring and viewer steps.
+  - Failures: it stops at the first step that fails.
+  - Unlabelled WAVs: if there's no _truth.csv yet, it skips scoring and still
+    opens the viewer.
+  - Paths: they're resolved relative to the script, so it works from any
+    directory.
+  - Testing: I ran the full pipeline (without opening the viewer), the no-truth
+    case and the failing-model case.
+
+  Checking make_test_wav.py: I built 5 test WAVs of 40 clips each and compared
+  every labelled span sample by sample with its source file.
+  - Clip audio: all 200 clips are complete and unaltered, there's no overlap,
+    and the gaps are pure silence.
+  - Timestamps: they were up to one sample (0.06 ms) off because they were
+    written to 4 decimal places. They're now written to 6 and match exactly.
+    That was never audible.
+
+  Where the cut-offs come from: many Speech Commands recordings stop mid-word,
+  because the 1 s clip ends before the speaker has finished. I measured this on
+  400 random clips per word and plotted examples to confirm:
+
+  ┌──────────┬────────────────┬──────────────────┐
+  │   Word   │ Cut at the end │ Cut at the start │
+  ├──────────┼────────────────┼──────────────────┤
+  │ forward  │ 17%            │ 2%               │
+  ├──────────┼────────────────┼──────────────────┤
+  │ backward │ 16%            │ 2%               │
+  ├──────────┼────────────────┼──────────────────┤
+  │ stop     │ 6%             │ 3%               │
+  └──────────┴────────────────┴──────────────────┘
+
+  In one backward clip, the word starts at 0.95 s, so the file contains only
+  "ba-".
+
+  Why this matters for training: about 1 in 6 of your forward and backward
+  training examples are labelled as the keyword but contain only the first part
+  of the word. That teaches the model that a word fragment counts as a keyword,
+  which is exactly the false-accept pattern in your board recording. When we get
+  to step 2 (data and augmentation), I'd suggest:
+  - Drop truncated keyword clips from the keyword classes, or relabel them as
+    other to use them as fragment negatives.
+  - Add an option to make_test_wav.py to skip them, so synthetic tests are
+    cleaner.
+
+  The edge-energy check I used for these numbers can be reused for both.
+
+  Nothing is committed.

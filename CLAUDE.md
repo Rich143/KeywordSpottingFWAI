@@ -100,6 +100,10 @@ and host-tested but not yet called on target; inference is initialised but not r
 - **Model on long audio** (host, sliding window): `make_test_wav.py -o t.wav` (or a board capture via
   `receive_and_play.py -o`) → `run_model_on_wav.py -m tflite_models/<model>.tflite -w t.wav` →
   `view_results.py -w t.wav`
+- **Board eval set** (`HostSW/eval_recordings/`, held out, never train on it; see its README): record with
+  `receive_and_play.py -o`, label keywords (+ `ignore`) in Audacity → `audacity_labels_to_truth.py` →
+  `run_model_on_wav.py` → `score_results.py --sweep` (keyword recall, false accepts/min) → `view_results.py`.
+  `eval_wav.py -w <wav>` runs those last three steps in one go
 
 ## Host Software (`HostSW/`)
 - `TrainModel.ipynb` (current, v7): Google Speech Commands v0.02 → features → CNN → int8 PTQ →
@@ -111,6 +115,9 @@ and host-tested but not yet called on target; inference is initialised but not r
   per-window CSV. Its `AudioPreprocessor` is a copy of the notebook's; keep them in sync
 - `make_test_wav.py`: stitches random Speech Commands clips into a WAV + `<stem>_truth.csv`
 - `view_results.py`: plays the WAV with the model output animated in sync (matplotlib, sounddevice)
+- `audacity_labels_to_truth.py`: Audacity label export ↔ `<stem>_truth.csv`
+- `score_results.py`: smoothing + threshold + suppression (`detect()`) over a results CSV, matched
+  against truth → recall and false accepts/min, `<stem>_detections.csv` for the viewer
 - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
 - Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).
