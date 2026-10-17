@@ -2,3 +2,7 @@
 *.csv
 !*_truth.csv
 !eval_history.csv
+
+# Audacity temp files while a project is open (merged into .aup4 on close)
+*.aup4-shm
+*.aup4-wal
