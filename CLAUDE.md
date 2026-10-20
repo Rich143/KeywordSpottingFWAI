@@ -105,13 +105,20 @@ and host-tested but not yet called on target; inference is initialised but not r
   `run_model_on_wav.py` → `score_results.py --sweep` (keyword recall, false accepts/min) → `view_results.py`.
   `eval_wav.py -w <wav>` runs those last three steps in one go.
   `snapshot_eval.py -v <ver> -m <model>` scores every labelled recording (minus `eval_ignore.txt`) and
-  appends per-recording + pooled `ALL` rows to `eval_recordings/eval_history.csv`. Run it for each new model
+  appends per-recording + pooled `ALL` rows to `eval_recordings/eval_history.csv`. `TrainModel.ipynb` runs it
+  for each new model (Board Eval section, via `snapshot_eval.snapshot_eval()`) and logs the `ALL` row to the
+  MLflow run. Run it as a script for other detection settings, then that section's second cell to log it
 
 ## Host Software (`HostSW/`)
 - `TrainModel.ipynb` (current, v7): Google Speech Commands v0.02 → features → CNN → int8 PTQ →
   `tflite_models/`. It computes features by calling the **same C preprocessing library** via ctypes
   (`HostSW/build/.../libAudioPreprocessing.dylib`, built from `HostSW/CMakeLists.txt`), so training
-  features match the firmware.
+  features match the firmware. `MODEL_VERSION` (first cell) names the checkpoint/log dirs, tflite files
+  and MLflow run. "Run All" does a full run (train → export → board eval → MLflow); the Optuna
+  Optimize cells only run with `RUN_OPTIMIZE = True`.
+- MLflow tracking: the notebook logs one run per training (params, dataset manifest, metrics, models, plots)
+  to `HostSW/mlflow/` (SQLite + artifacts, Git LFS, see its README). Logging cells call `require_mlflow_run()`
+  so they fail instead of silently starting a new run. UI: `cd HostSW && mlflow ui --backend-store-uri sqlite:///mlflow/mlflow.db`
 - Datasets: `dataset/` = Speech Commands (downloaded, gitignored; `_background_noise_split_/` is derived
   and rebuilt by the notebook). `dataset_board/` = our board-mic training recordings (Git LFS, see its
   README); its `_background_noise_/` long recordings are split into the background class. Synthetic
@@ -124,7 +131,7 @@ and host-tested but not yet called on target; inference is initialised but not r
 - `audacity_labels_to_truth.py`: Audacity label export ↔ `<stem>_truth.csv`
 - `score_results.py`: smoothing + threshold + suppression (`detect()`) over a results CSV, matched
   against truth → recall and false accepts/min, `<stem>_detections.csv` for the viewer
-- Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, numpy, pandas,
+- Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, mlflow, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
 - Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).
   `HostSW/setup_env.sh` creates it, builds the preprocessing dylib and smoke-tests imports.
@@ -135,7 +142,6 @@ and host-tested but not yet called on target; inference is initialised but not r
   out so they don't override the BSP audio config. **These edits are outside USER CODE blocks, so
   CubeMX regeneration will restore them.** Re-apply after regenerating.
 - `MX_UARTx_Init` call in `app_x-cube-ai.c` / `bsp_ai.h` removed (duplicate USART init). Re-apply after AI regeneration.
-- `Core/Src/audio_cb_rate.c` is an untracked experiment that duplicates symbols in `audio.c`. Don't add it to the build.
 
 ## File Structure
 ```

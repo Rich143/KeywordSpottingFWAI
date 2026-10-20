@@ -1,2 +1,5 @@
 # Board-mic training recordings (HostSW/dataset_board/) are stored with Git LFS
 HostSW/dataset_board/**/*.wav filter=lfs diff=lfs merge=lfs -text
+# MLflow tracking store (HostSW/mlflow/), see its README
+HostSW/mlflow/mlflow.db filter=lfs diff=lfs merge=lfs -text
+HostSW/mlflow/artifacts/** filter=lfs diff=lfs merge=lfs -text

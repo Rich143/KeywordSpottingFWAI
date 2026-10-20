@@ -41,7 +41,7 @@ echo "==> Smoke test"
 ENV_PREFIX="$("$CONDA" env list | awk -v n="$ENV_NAME" '$1 == n {print $NF}')"
 cd "$HOSTSW_DIR"
 "$ENV_PREFIX/bin/python" - <<'EOF'
-import ctypes, numpy, pandas, sklearn, matplotlib, seaborn, soundfile, sounddevice, serial, optuna
+import ctypes, numpy, pandas, sklearn, matplotlib, seaborn, soundfile, sounddevice, serial, optuna, mlflow
 import tensorflow as tf
 from ai_edge_litert.interpreter import Interpreter
 ctypes.CDLL("build/audioproc-build/libAudioPreprocessing.dylib")

@@ -22,6 +22,10 @@ Usage:
     python snapshot_eval.py -v v7 -m tflite_models/kws_v7_int8_softmax.tflite
     python snapshot_eval.py -v v8 -m tflite_models/kws_v8_int8_softmax.tflite --notes "noise aug + LibriSpeech negatives"
     python snapshot_eval.py -v v7 -m tflite_models/kws_v7_int8_softmax.tflite --threshold 0.6 --avg 1.0
+
+From Python (TrainModel.ipynb does this at the end of a training run):
+    import snapshot_eval
+    snapshot_eval.snapshot_eval("v8", "tflite_models/kws_v8_int8_softmax.tflite", threshold=0.6)
 """
 
 import argparse
@@ -41,6 +45,9 @@ DEFAULT_EVAL_DIR = SCRIPT_DIR / "eval_recordings"
 IGNORE_FILE_NAME = "eval_ignore.txt"
 HISTORY_FILE_NAME = "eval_history.csv"
 DEFAULT_STRIDE_S = 0.1
+DEFAULT_AVG_S = 0.5
+DEFAULT_THRESHOLD = 0.7
+DEFAULT_SUPPRESS_S = 1.5
 ALL_ROW = "ALL"
 
 # Columns that identify a snapshot: same values = same snapshot
@@ -55,6 +62,11 @@ HISTORY_FIELDS = [
     "false_accepts", "substitutions", "duplicates", "ignored",
     "fa_per_min", "fa_per_hour", "notes",
 ]
+
+
+class SnapshotError(RuntimeError):
+    """The snapshot can't be taken (missing model/recordings, or it already exists).
+    The script turns it into an exit message; a notebook gets a normal exception."""
 
 
 def file_sha256(path):
@@ -119,17 +131,17 @@ def run_model(model_path, wav, stride_s):
     ]
     proc = subprocess.run(cmd, capture_output=True, text=True)
     if proc.returncode != 0:
-        sys.exit(f"run_model_on_wav.py failed on {wav.name}:\n{proc.stdout}{proc.stderr}")
+        raise SnapshotError(f"run_model_on_wav.py failed on {wav.name}:\n{proc.stdout}{proc.stderr}")
     return results
 
 
-def score_recording(results_path, truth_path, args, tolerance_s):
+def score_recording(results_path, truth_path, avg_s, threshold, suppress_s, tolerance_s):
     """Returns a dict of the per-recording metric columns."""
     labels, _, end_s, probs = sr.load_results(results_path)
     keyword_spans, ignore_spans = sr.load_truth(truth_path)
     duration_s = float(end_s.max())
 
-    detections = sr.detect(labels, end_s, probs, args.avg, args.threshold, args.suppress)
+    detections = sr.detect(labels, end_s, probs, avg_s, threshold, suppress_s)
     hit, _, n_false, _, neg_min = sr.score(detections, keyword_spans, ignore_spans, tolerance_s, duration_s)
 
     row = {
@@ -178,7 +190,7 @@ def read_history(path):
     with open(path, newline="") as f:
         reader = csv.DictReader(f)
         if reader.fieldnames != HISTORY_FIELDS:
-            sys.exit(f"{path}: columns don't match this script's (was it edited, or written by an older version?)")
+            raise SnapshotError(f"{path}: columns don't match this script's (was it edited, or written by an older version?)")
         return list(reader)
 
 
@@ -201,9 +213,12 @@ def parse_args():
     parser.add_argument("-m", "--model", required=True, help="tflite model path")
     parser.add_argument("-s", "--stride", type=float, default=DEFAULT_STRIDE_S,
                         help=f"window stride in seconds (default: {DEFAULT_STRIDE_S})")
-    parser.add_argument("--avg", type=float, default=0.5, help="smoothing window, s (default: 0.5)")
-    parser.add_argument("--threshold", type=float, default=0.7, help="detection threshold (default: 0.7)")
-    parser.add_argument("--suppress", type=float, default=1.5, help="suppression time, s (default: 1.5)")
+    parser.add_argument("--avg", type=float, default=DEFAULT_AVG_S,
+                        help=f"smoothing window, s (default: {DEFAULT_AVG_S})")
+    parser.add_argument("--threshold", type=float, default=DEFAULT_THRESHOLD,
+                        help=f"detection threshold (default: {DEFAULT_THRESHOLD})")
+    parser.add_argument("--suppress", type=float, default=DEFAULT_SUPPRESS_S,
+                        help=f"suppression time, s (default: {DEFAULT_SUPPRESS_S})")
     parser.add_argument("--tolerance", type=float, help="match tolerance after a span, s (default: 1.0 + avg)")
     parser.add_argument("--notes", default="", help="free text stored with the snapshot")
     parser.add_argument("--eval-dir", default=str(DEFAULT_EVAL_DIR), help=f"recordings dir (default: {DEFAULT_EVAL_DIR})")
@@ -213,41 +228,50 @@ def parse_args():
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
-    eval_dir = pathlib.Path(args.eval_dir)
-    history_path = pathlib.Path(args.history) if args.history else eval_dir / HISTORY_FILE_NAME
-    model_path = pathlib.Path(args.model)
-    tolerance_s = args.tolerance if args.tolerance is not None else sr.WINDOW_LEN_S + args.avg
+def snapshot_eval(version, model_path, stride_s=DEFAULT_STRIDE_S, avg_s=DEFAULT_AVG_S,
+                  threshold=DEFAULT_THRESHOLD, suppress_s=DEFAULT_SUPPRESS_S, tolerance_s=None,
+                  notes="", eval_dir=DEFAULT_EVAL_DIR, history_path=None, replace=False):
+    """Scores model_path on every labelled recording in eval_dir and appends the rows to the
+    history CSV (default <eval_dir>/eval_history.csv).
+
+    Same options as the command line; tolerance_s defaults to the window length + avg_s.
+    Returns the pooled ALL row as written to the CSV. Raises SnapshotError if the snapshot
+    already exists (unless replace) or there is nothing to score.
+    """
+    eval_dir = pathlib.Path(eval_dir)
+    history_path = pathlib.Path(history_path) if history_path else eval_dir / HISTORY_FILE_NAME
+    model_path = pathlib.Path(model_path)
+    if tolerance_s is None:
+        tolerance_s = sr.WINDOW_LEN_S + avg_s
 
     if not model_path.exists():
-        sys.exit(f"model {model_path} not found")
+        raise SnapshotError(f"model {model_path} not found")
 
     snapshot = format_row({
         "timestamp": datetime.datetime.now().isoformat(timespec="seconds"),
-        "model_version": args.version,
+        "model_version": version,
         "model_path": display_path(model_path),
         "model_sha256": file_sha256(model_path),
-        "stride_s": args.stride,
-        "avg_s": args.avg,
-        "threshold": args.threshold,
-        "suppress_s": args.suppress,
+        "stride_s": stride_s,
+        "avg_s": avg_s,
+        "threshold": threshold,
+        "suppress_s": suppress_s,
         "tolerance_s": tolerance_s,
-        "notes": args.notes,
+        "notes": notes,
     })
 
     history = read_history(history_path)
     if any(same_snapshot(r, snapshot) for r in history):
-        if not args.replace:
-            sys.exit(f"{history_path} already has a snapshot for {args.version} with these settings "
-                     f"(use --replace to overwrite it)")
+        if not replace:
+            raise SnapshotError(f"{history_path} already has a snapshot for {version} with these settings "
+                                f"(use --replace to overwrite it)")
         history = [r for r in history if not same_snapshot(r, snapshot)]
 
     recordings, skipped = find_recordings(eval_dir, read_ignore_patterns(eval_dir))
     for wav, reason in skipped:
         print(f"Skipping {wav.name}: {reason}")
     if not recordings:
-        sys.exit(f"no labelled recordings in {eval_dir}")
+        raise SnapshotError(f"no labelled recordings in {eval_dir}")
 
     count_keys = None
     totals = {}
@@ -255,8 +279,8 @@ def main():
     for wav in recordings:
         print(f"{wav.name}:")
         truth = update_truth(wav)
-        results = run_model(model_path, wav, args.stride)
-        counts = score_recording(results, truth, args, tolerance_s)
+        results = run_model(model_path, wav, stride_s)
+        counts = score_recording(results, truth, avg_s, threshold, suppress_s, tolerance_s)
         count_keys = count_keys or list(counts)
         for k in count_keys:
             totals[k] = totals.get(k, 0) + counts[k]
@@ -271,8 +295,8 @@ def main():
     previous = [r for r in history if r["recording"] == ALL_ROW]
     write_history(history_path, history + rows)
 
-    print(f"\n{args.version} ({len(recordings)} recording{'s' if len(recordings) != 1 else ''}, avg {args.avg}s, threshold {args.threshold}, "
-          f"suppress {args.suppress}s):")
+    print(f"\n{version} ({len(recordings)} recording{'s' if len(recordings) != 1 else ''}, avg {avg_s}s, threshold {threshold}, "
+          f"suppress {suppress_s}s):")
     print(f"  recall {all_row['hits']}/{all_row['keyword_spans']} ({100 * all_row['recall']:.0f}%)  "
           + "  ".join(f"{kw} {100 * all_row[f'recall_{kw}']:.0f}%" for kw in sr.KEYWORDS))
     print(f"  false accepts {all_row['false_accepts']} in {all_row['negative_min']:.1f} min "
@@ -284,6 +308,18 @@ def main():
                   f"sup {r['suppress_s']}  recall {100 * float(r['recall']):.0f}%  "
                   f"FA {float(r['fa_per_min']):.2f}/min  {r['notes']}")
     print(f"\nAppended {len(rows)} rows to {history_path}")
+    return rows[-1]
+
+
+def main():
+    args = parse_args()
+    try:
+        snapshot_eval(args.version, args.model, stride_s=args.stride, avg_s=args.avg,
+                      threshold=args.threshold, suppress_s=args.suppress, tolerance_s=args.tolerance,
+                      notes=args.notes, eval_dir=args.eval_dir, history_path=args.history,
+                      replace=args.replace)
+    except SnapshotError as e:
+        sys.exit(str(e))
 
 
 if __name__ == "__main__":
