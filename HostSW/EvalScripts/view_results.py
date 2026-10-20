@@ -22,8 +22,8 @@ is actually heard and can't drift from it.
 Controls: space pause/resume, left/right seek 1 s, click a plot to seek, home restart.
 
 Usage:
-    python view_results.py -w capture.wav     # reads capture.csv (+ capture_truth.csv, capture_detections.csv if present)
-    python view_results.py -w capture.wav -r results.csv -t truth.csv -d detections.csv --span 10
+    python EvalScripts/view_results.py -w capture.wav     # reads capture.csv (+ capture_truth.csv, capture_detections.csv if present)
+    python EvalScripts/view_results.py -w capture.wav -r results.csv -t truth.csv -d detections.csv --span 10
 
 Requirements:
     pip install numpy matplotlib sounddevice

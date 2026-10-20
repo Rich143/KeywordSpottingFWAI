@@ -49,7 +49,7 @@ Spans don't need to be exact. Scoring allows about 1 s of slack after the word.
 3. **File → Export → Export Labels…** and save as `eval_<nn>_<desc>_labels.txt` next to the WAV.
 4. Convert it to the truth CSV (labels are checked; a typo is rejected with its line number):
    ```
-   python HostSW/audacity_labels_to_truth.py -i HostSW/eval_recordings/eval_02_kitchen_labels.txt
+   python HostSW/EvalScripts/audacity_labels_to_truth.py -i HostSW/eval_recordings/eval_02_kitchen_labels.txt
    ```
 5. To fix labels later: **File → Import → Labels…** with the `_labels.txt` file, edit, then export
    and convert again. `--reverse` rebuilds a `_labels.txt` file from a truth CSV if you've lost it.
@@ -59,15 +59,15 @@ Spans don't need to be exact. Scoring allows about 1 s of slack after the word.
 All three steps in one command (options: `-m` model, `--threshold`/`--avg`/`--suppress`, `--no-view`):
 ```
 cd HostSW
-python eval_wav.py -w eval_recordings/eval_02_kitchen.wav
+python EvalScripts/eval_wav.py -w eval_recordings/eval_02_kitchen.wav
 ```
 
 Or step by step:
 ```
 cd HostSW
-python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w eval_recordings/eval_02_kitchen.wav
-python score_results.py -r eval_recordings/eval_02_kitchen.csv --sweep
-python view_results.py -w eval_recordings/eval_02_kitchen.wav
+python EvalScripts/run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w eval_recordings/eval_02_kitchen.wav
+python EvalScripts/score_results.py -r eval_recordings/eval_02_kitchen.csv --sweep
+python EvalScripts/view_results.py -w eval_recordings/eval_02_kitchen.wav
 ```
 
 ## 4. Snapshot a model version
@@ -76,7 +76,7 @@ When you have a new model, score it on every labelled recording and append the r
 `eval_history.csv` (committed, so all versions can be compared):
 ```
 cd HostSW
-python snapshot_eval.py -v v8 -m tflite_models/kws_v8_int8_softmax.tflite --notes "what changed"
+python EvalScripts/snapshot_eval.py -v v8 -m tflite_models/kws_v8_int8_softmax.tflite --notes "what changed"
 ```
 It converts any `_labels.txt` newer than its `_truth.csv`, runs the model, and scores with the same
 code as `score_results.py`. It writes one row per recording and an `ALL` row that pools them. To

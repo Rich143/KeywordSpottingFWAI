@@ -16,8 +16,8 @@ classes other and _background_noise_ (treated as negative audio by the scorer;
 accepted so make_test_wav.py truth files round-trip).
 
 Usage:
-    python audacity_labels_to_truth.py -i eval_01_speech_labels.txt          # -> eval_01_speech_truth.csv
-    python audacity_labels_to_truth.py -i eval_01_speech_truth.csv --reverse  # -> eval_01_speech_labels.txt
+    python EvalScripts/audacity_labels_to_truth.py -i eval_01_speech_labels.txt          # -> eval_01_speech_truth.csv
+    python EvalScripts/audacity_labels_to_truth.py -i eval_01_speech_truth.csv --reverse  # -> eval_01_speech_labels.txt
 """
 
 import argparse

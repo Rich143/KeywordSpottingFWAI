@@ -9,9 +9,9 @@ Stops at the first step that fails. Each script runs with the same Python
 interpreter as this one, so run it from the kws env.
 
 Usage:
-    python eval_wav.py -w eval_recordings/eval_01_speech.wav
-    python eval_wav.py -w eval_recordings/eval_01_speech.wav -m tflite_models/kws_v7_float32_softmax.tflite
-    python eval_wav.py -w eval_recordings/eval_01_speech.wav --threshold 0.6 --avg 1.0 --no-view
+    python EvalScripts/eval_wav.py -w eval_recordings/eval_01_speech.wav
+    python EvalScripts/eval_wav.py -w eval_recordings/eval_01_speech.wav -m tflite_models/kws_v7_float32_softmax.tflite
+    python EvalScripts/eval_wav.py -w eval_recordings/eval_01_speech.wav --threshold 0.6 --avg 1.0 --no-view
 """
 
 import argparse
@@ -20,7 +20,8 @@ import subprocess
 import sys
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-DEFAULT_MODEL = SCRIPT_DIR / "tflite_models" / "kws_v7_int8_softmax.tflite"
+HOSTSW_DIR = SCRIPT_DIR.parent
+DEFAULT_MODEL = HOSTSW_DIR / "tflite_models" / "kws_v7_int8_softmax.tflite"
 
 
 def run_step(name, script, script_args):

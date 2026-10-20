@@ -3,7 +3,7 @@
 #
 #   1. Creates the conda env from HostSW/environment.yml (or updates it if it exists)
 #   2. Builds the C preprocessing library (HostSW/build/audioproc-build/libAudioPreprocessing.dylib)
-#      that the training notebooks and run_model_on_wav.py load via ctypes
+#      that the training notebooks and EvalScripts/run_model_on_wav.py load via ctypes
 #   3. Smoke-tests the main imports
 #
 # Usage: HostSW/setup_env.sh [env-name]     (default env name: kws)

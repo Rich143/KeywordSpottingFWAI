@@ -18,8 +18,8 @@ WAV. `clipped` is the number of spectrogram cells that saturated when
 quantised to int8 (a sign of a level mismatch with the training data).
 
 Usage:
-    python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w capture.wav
-    python run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w capture.wav -s 0.25 -o results.csv
+    python EvalScripts/run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w capture.wav
+    python EvalScripts/run_model_on_wav.py -m tflite_models/kws_v7_int8_softmax.tflite -w capture.wav -s 0.25 -o results.csv
 
 Requirements:
     pip install numpy ai-edge-litert
@@ -38,7 +38,8 @@ import numpy as np
 from ai_edge_litert.interpreter import Interpreter
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-DEFAULT_LIB_PATH = SCRIPT_DIR / "build" / "audioproc-build" / "libAudioPreprocessing.dylib"
+HOSTSW_DIR = SCRIPT_DIR.parent
+DEFAULT_LIB_PATH = HOSTSW_DIR / "build" / "audioproc-build" / "libAudioPreprocessing.dylib"
 
 # Model output order, from TrainModel.ipynb (DESIRED_KEYWORDS + ['other'])
 LABELS = ["forward", "backward", "stop", "_background_noise_", "other"]

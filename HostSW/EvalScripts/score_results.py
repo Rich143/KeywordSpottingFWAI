@@ -27,9 +27,9 @@ Negative time = audio duration minus the keyword and 'ignore' spans. Truth
 labels 'other' / '_background_noise_' (make_test_wav.py) are negative audio.
 
 Usage:
-    python score_results.py -r eval_01_speech.csv                 # truth: eval_01_speech_truth.csv
-    python score_results.py -r eval_01_speech.csv --sweep
-    python score_results.py -r eval_01_speech.csv --avg 1.0 --threshold 0.6 --suppress 1.5
+    python EvalScripts/score_results.py -r eval_01_speech.csv                 # truth: eval_01_speech_truth.csv
+    python EvalScripts/score_results.py -r eval_01_speech.csv --sweep
+    python EvalScripts/score_results.py -r eval_01_speech.csv --avg 1.0 --threshold 0.6 --suppress 1.5
 """
 
 import argparse

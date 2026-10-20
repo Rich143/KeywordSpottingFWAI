@@ -19,9 +19,9 @@ negative audio. Re-running the same model version with the same settings is
 refused unless --replace is given, which drops the old rows first.
 
 Usage:
-    python snapshot_eval.py -v v7 -m tflite_models/kws_v7_int8_softmax.tflite
-    python snapshot_eval.py -v v8 -m tflite_models/kws_v8_int8_softmax.tflite --notes "noise aug + LibriSpeech negatives"
-    python snapshot_eval.py -v v7 -m tflite_models/kws_v7_int8_softmax.tflite --threshold 0.6 --avg 1.0
+    python EvalScripts/snapshot_eval.py -v v7 -m tflite_models/kws_v7_int8_softmax.tflite
+    python EvalScripts/snapshot_eval.py -v v8 -m tflite_models/kws_v8_int8_softmax.tflite --notes "noise aug + LibriSpeech negatives"
+    python EvalScripts/snapshot_eval.py -v v7 -m tflite_models/kws_v7_int8_softmax.tflite --threshold 0.6 --avg 1.0
 
 From Python (TrainModel.ipynb does this at the end of a training run):
     import snapshot_eval
@@ -41,7 +41,8 @@ import audacity_labels_to_truth as labels_conv
 import score_results as sr
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-DEFAULT_EVAL_DIR = SCRIPT_DIR / "eval_recordings"
+HOSTSW_DIR = SCRIPT_DIR.parent
+DEFAULT_EVAL_DIR = HOSTSW_DIR / "eval_recordings"
 IGNORE_FILE_NAME = "eval_ignore.txt"
 HISTORY_FILE_NAME = "eval_history.csv"
 DEFAULT_STRIDE_S = 0.1
@@ -80,7 +81,7 @@ def file_sha256(path):
 def display_path(path):
     """Path relative to HostSW when possible, so the history CSV doesn't depend on where the repo is checked out."""
     try:
-        return str(path.resolve().relative_to(SCRIPT_DIR))
+        return str(path.resolve().relative_to(HOSTSW_DIR))
     except ValueError:
         return str(path)
 

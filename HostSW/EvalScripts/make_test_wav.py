@@ -17,8 +17,8 @@ Outputs:
   <output>_truth.csv    start_s, end_s, label, file   (one row per clip)
 
 Usage:
-    python make_test_wav.py -o sc_test.wav
-    python make_test_wav.py -o sc_test.wav -n 20 --gap 0.3 1.0 --seed 3
+    python EvalScripts/make_test_wav.py -o sc_test.wav
+    python EvalScripts/make_test_wav.py -o sc_test.wav -n 20 --gap 0.3 1.0 --seed 3
 """
 
 import argparse
@@ -30,7 +30,8 @@ import wave
 import numpy as np
 
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
-DEFAULT_DATASET_DIR = SCRIPT_DIR / "dataset"
+HOSTSW_DIR = SCRIPT_DIR.parent
+DEFAULT_DATASET_DIR = HOSTSW_DIR / "dataset"
 
 SAMPLE_RATE_HZ = 16000
 
