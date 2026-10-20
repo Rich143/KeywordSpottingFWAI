@@ -112,6 +112,10 @@ and host-tested but not yet called on target; inference is initialised but not r
   `tflite_models/`. It computes features by calling the **same C preprocessing library** via ctypes
   (`HostSW/build/.../libAudioPreprocessing.dylib`, built from `HostSW/CMakeLists.txt`), so training
   features match the firmware.
+- Datasets: `dataset/` = Speech Commands (downloaded, gitignored; `_background_noise_split_/` is derived
+  and rebuilt by the notebook). `dataset_board/` = our board-mic training recordings (Git LFS, see its
+  README); its `_background_noise_/` long recordings are split into the background class. Synthetic
+  coloured noise is capped at `SYNTHETIC_NOISE_SECONDS` per colour
 - `receive_and_play.py`: UART audio receiver and playback (pyserial, sounddevice, numpy)
 - `run_model_on_wav.py`: sliding 1 s window over a WAV → C preprocessing dylib → quantise → tflite →
   per-window CSV. Its `AudioPreprocessor` is a copy of the notebook's; keep them in sync
