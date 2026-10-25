@@ -1,0 +1,10 @@
+start_s,end_s,label,file
+44.767926,45.237926,forward,Sigi_Schmid_774.35
+65.829151,66.249151,stop,Hillary_Clinton_5852.47
+131.333493,131.883493,forward,Nine-segment_display_44.57
+166.292009,166.592009,stop,The_World_Without_Us_781.59
+252.349710,254.489710,ignore,George_Lansbury_3769.24
+252.449710,252.809710,backward,George_Lansbury_3769.24
+258.819710,265.668250,ignore,George_Lansbury_3769.24
+299.528899,300.228899,stop,Cory_Booker_1224.95
+301.978899,302.488899,stop,Cory_Booker_1224.95

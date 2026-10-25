@@ -108,6 +108,10 @@ and host-tested but not yet called on target; inference is initialised but not r
   appends per-recording + pooled `ALL` rows to `eval_recordings/eval_history.csv`. `TrainModel.ipynb` runs it
   for each new model (Board Eval section, via `snapshot_eval.snapshot_eval()`) and logs the `ALL` row to the
   MLflow run. Run it as a script for other detection settings, then that section's second cell to log it
+- **Public eval set** (`HostSW/eval_recordings_public/`, see its README): LibriSpeech, AMI and Spoken Wikipedia pieces with keyword
+  spans from word alignments, same WAV + `_truth.csv` format, hundreds of speakers. Built by
+  `make_public_eval.py` from `dataset_public/`; WAVs are gitignored (rebuild, deterministic). Not yet wired into
+  `snapshot_eval.py` / the notebook. Never train on the speakers in its `speakers.txt`
 
 ## Host Software (`HostSW/`)
 - Notebooks are in `Notebooks/`, eval scripts in `EvalScripts/`. Both use paths relative to `HostSW/`:
@@ -123,7 +127,8 @@ and host-tested but not yet called on target; inference is initialised but not r
   so they fail instead of silently starting a new run. UI: `cd HostSW && mlflow ui --backend-store-uri sqlite:///mlflow/mlflow.db`
 - Datasets: `dataset/` = Speech Commands (downloaded, gitignored; `_background_noise_split_/` is derived
   and rebuilt by the notebook). `dataset_board/` = our board-mic training recordings (Git LFS, see its
-  README); its `_background_noise_/` long recordings are split into the background class. Synthetic
+  README); its `_background_noise_/` long recordings are split into the background class. `dataset_public/` =
+  LibriSpeech, its MFA alignments, AMI and Spoken Wikipedia (gitignored), only used for the public eval set so far. Synthetic
   coloured noise is capped at `SYNTHETIC_NOISE_SECONDS` per colour
 - `receive_and_play.py`: UART audio receiver and playback (pyserial, sounddevice, numpy)
 - `EvalScripts/`:
@@ -136,6 +141,8 @@ and host-tested but not yet called on target; inference is initialised but not r
     against truth → recall and false accepts/min, `<stem>_detections.csv` for the viewer
   - `eval_wav.py`: run model → score → view on one WAV
   - `snapshot_eval.py`: scores a model on all of `eval_recordings/` → `eval_history.csv`
+  - `make_public_eval.py`: builds `eval_recordings_public/` from `dataset_public/` (`--stats` for keyword counts)
+  - `download_ami.py`: resumable AMI audio download from the AMI site's wget script (Array1-01 only by default)
 - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, mlflow, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
 - Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).

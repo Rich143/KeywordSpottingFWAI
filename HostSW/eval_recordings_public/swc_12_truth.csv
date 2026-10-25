@@ -1,0 +1,12 @@
+start_s,end_s,label,file
+6.788865,7.228865,backward,VoiceXML_233.97
+30.060878,30.560878,backward,Big_Bang_546.45
+44.690362,45.030362,stop,Air-tractor_sledge_459.75
+99.490144,99.830144,stop,Wakefield%2c_Massachusetts_1376.02
+147.668315,147.968315,stop,Schr%c3%b6dinger%27s_cat_365.92
+154.388315,155.438315,ignore,Schr%c3%b6dinger%27s_cat_365.92
+182.517839,182.997839,forward,Robert_Garran_1381.02
+202.920864,203.240864,forward,Michael_Jordan_1804.77
+263.636643,264.056643,stop,Ronald_Reagan_1560.98
+305.738420,305.968420,stop,Learned_helplessness_238.21
+307.628420,308.309188,ignore,Learned_helplessness_238.21

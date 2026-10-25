@@ -1,0 +1,16 @@
+start_s,end_s,label,file
+10.818370,11.388370,forward,Iron_Curtain_481.64
+29.946210,30.346210,stop,The_Cat_in_the_Hat_(film)_136.52
+41.653813,42.225193,ignore,Hurricane_Claudette_(2003)_182.64
+56.665193,57.075193,forward,Hurricane_Claudette_(2003)_182.64
+64.544003,64.874003,stop,The_Smashing_Pumpkins_975.04
+131.788543,132.378543,forward,2012_phenomenon_1151.85
+152.760828,153.330828,backward,Folding%40home_3430.45
+193.444995,193.804995,stop,Folding%40home_1405.44
+211.323102,211.683102,stop,Grim_Fandango_368.40
+231.807024,232.217024,stop,Ivy%2c_Virginia_79.90
+261.195339,261.745339,forward,Star_Trek_II%3a_The_Wrath_of_Khan_555.15
+274.264642,274.774642,forward,Battle_of_Fredericksburg_1670.49
+283.554642,287.350000,ignore,Battle_of_Fredericksburg_1670.49
+299.288929,299.508929,stop,Florida_Highway_Patrol_1874.65
+307.038929,308.130562,ignore,Florida_Highway_Patrol_1874.65

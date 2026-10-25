@@ -36,8 +36,8 @@ Label **only** keywords, plus `ignore` where needed. Everything unlabelled count
 
 | Label | Use for |
 |---|---|
-| `forward`, `backward`, `stop` | a clearly spoken keyword, from the start of the word to its end |
-| `ignore` | audio that shouldn't count as a hit or a false accept: a cut-off or mumbled keyword, "stopped" / "forwards", a keyword said by the TV, a cough right on top of a word |
+| `forward`, `backward`, `stop` | a clearly spoken keyword, from the start of the word to its end. "forwards" / "backwards" count as `forward` / `backward` |
+| `ignore` | audio that shouldn't count as a hit or a false accept: a cut-off or mumbled keyword, "stopped" / "stopping", a keyword said by the TV, a cough right on top of a word |
 
 Spans don't need to be exact. Scoring allows about 1 s of slack after the word.
 

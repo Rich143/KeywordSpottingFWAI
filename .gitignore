@@ -67,6 +67,8 @@ build/
 
 # Dataset
 dataset/
+# Public speech datasets for eval_recordings_public (LibriSpeech, AMI), see make_public_eval.py
+dataset_public/
 
 # Python
 __pycache__/
