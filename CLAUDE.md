@@ -142,7 +142,8 @@ and host-tested but not yet called on target; inference is initialised but not r
   - `eval_wav.py`: run model → score → view on one WAV
   - `snapshot_eval.py`: scores a model on all of `eval_recordings/` → `eval_history.csv`
   - `make_public_eval.py`: builds `eval_recordings_public/` from `dataset_public/` (`--stats` for keyword counts)
-  - `download_ami.py`: resumable AMI audio download from the AMI site's wget script (Array1-01 only by default)
+  - `download_ami.py`: resumable AMI audio download from the AMI site's wget script (Mix-Headset only by default;
+    `--channels` picks other recordings)
 - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, mlflow, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
 - Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).
