@@ -4,8 +4,16 @@ page generates (https://groups.inf.ed.ac.uk/ami/download), with resume,
 retries and a progress bar.
 
 The generated script lists every selected channel of every meeting (all 16
-array mics come to ~163 GB). The eval set only needs one far-field mic per
-meeting, so by default only Array1-01 is downloaded (169 files, ~11 GB).
+array mics come to ~163 GB). The eval set only needs one recording per
+meeting, so by default only Mix-Headset is downloaded (169 files, ~11 GB): the
+participants' close-talk headset mics summed into one file. The table-top
+array mics (Array1-01...) pick up too much room noise and echo.
+
+--channels can name recordings the wget script doesn't list (e.g. Mix-Headset
+from a script generated for the array mics): their URLs are built from the
+script's meetings, since every AMI file is at
+.../amicorpus/<meeting>/audio/<meeting>.<channel>.wav. Channels include
+Mix-Headset, Mix-Lapel, Headset-0..4, Lapel-0..4, Array1-01..08, Array2-01..08.
 
 Resuming:
   - each file downloads to <name>.part and is renamed once it has the size
@@ -22,7 +30,7 @@ plus the build manifest and licence in <out>.
 Usage (from HostSW/):
     python EvalScripts/download_ami.py -s eval_recordings_public/amiBuild-152242-Thu-Oct-22-2026.wget.sh --dry-run
     python EvalScripts/download_ami.py -s eval_recordings_public/amiBuild-152242-Thu-Oct-22-2026.wget.sh
-    python EvalScripts/download_ami.py -s <script> --channels Array1-01 Array2-01 --meetings 'ES2002*'
+    python EvalScripts/download_ami.py -s <script> --channels Mix-Lapel --meetings 'ES2002*'
 """
 
 import argparse
@@ -44,7 +52,7 @@ from tqdm import tqdm
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 HOSTSW_DIR = SCRIPT_DIR.parent
 DEFAULT_OUT_DIR = HOSTSW_DIR / "dataset_public" / "ami"
-DEFAULT_CHANNELS = ["Array1-01"]
+DEFAULT_CHANNELS = ["Mix-Headset"]
 
 CHUNK_BYTES = 1 << 20
 MAX_BACKOFF_S = 60
@@ -94,19 +102,32 @@ def parse_wget_script(path, out_dir):
 
 
 def select(items, channels, meetings):
-    """Keeps the audio files matching the channel and meeting filters, plus all extras."""
-    kept = []
+    """The audio files of the selected channels and meetings, plus all extras. A channel
+    the script doesn't list for a meeting gets a URL built from that meeting's other files."""
+    extras = [i for i in items if i.optional or not AUDIO_NAME.match(i.dest.name)]
+    by_meeting = {}
     for item in items:
         m = AUDIO_NAME.match(item.dest.name)
-        if item.optional or not m:
-            kept.append(item)
-            continue
-        if channels != ["all"] and m["channel"] not in channels:
+        if item in extras:
             continue
         if meetings and not any(fnmatch.fnmatch(m["meeting"], p) for p in meetings):
             continue
-        kept.append(item)
-    return kept
+        by_meeting.setdefault(m["meeting"], {})[m["channel"]] = item
+
+    kept = []
+    for meeting, listed in sorted(by_meeting.items()):
+        if channels == ["all"]:
+            kept += [listed[c] for c in sorted(listed)]
+            continue
+        template = next(iter(listed.values()))
+        for channel in channels:
+            if channel in listed:
+                kept.append(listed[channel])
+            else:
+                name = f"{meeting}.{channel}.wav"
+                url = template.url.rsplit("/", 1)[0] + "/" + name
+                kept.append(Item(url, template.dest.with_name(name), optional=False))
+    return kept + extras
 
 
 def request(url, timeout, method="GET", offset=0):
@@ -240,7 +261,9 @@ def parse_args():
     parser.add_argument("-o", "--out", default=str(DEFAULT_OUT_DIR), help=f"output dir (default: {DEFAULT_OUT_DIR})")
     parser.add_argument(
         "--channels", nargs="+", default=DEFAULT_CHANNELS,
-        help="audio channels to keep, e.g. Array1-01 Mix-Headset, or 'all' (default: Array1-01)",
+        help="recordings to download per meeting, e.g. Mix-Headset Mix-Lapel Array1-01; channels the "
+             "script doesn't list are added from its meetings. 'all' = exactly what the script lists "
+             "(default: Mix-Headset)",
     )
     parser.add_argument("--meetings", nargs="+", help="meeting ids or globs to keep, e.g. ES2002a 'IS1*' (default: all)")
     parser.add_argument("--retries", type=int, default=10, help="retries per file without progress (default: 10)")

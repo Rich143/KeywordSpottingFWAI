@@ -1,11 +1,7 @@
 start_s,end_s,label,file
-8.775218,9.255218,backward,SeaMonkey_66.39
-75.349866,75.669866,stop,Star_Trek_911.55
-90.919480,91.209480,stop,Harvey_Milk_3373.45
-118.688576,119.078576,stop,Introduction_to_viruses_2027.02
-138.049236,138.549236,forward,Sunderland_A.F.C%2e_289.45
-151.742201,152.132201,forward,Princess_Beatrice_of_the_United_Kingdom_469.15
-219.461486,219.891486,forward,Battle_of_Vimy_Ridge_278.62
-232.719145,232.959145,stop,Yao_Ming_2288.79
-278.289124,278.619124,stop,The_Thriving_Cult_of_Greed_and_Power_90.67
-295.699127,296.309127,backward,Simon_Kuznets_935.62
+175.994871,176.524871,backward,Bicycle_862.80
+193.847218,194.327218,backward,SeaMonkey_66.39
+240.097178,240.417178,stop,Star_Trek_911.55
+255.328480,255.618480,stop,Harvey_Milk_3373.45
+283.249451,283.639451,stop,Introduction_to_viruses_2027.02
+302.189861,302.689861,forward,Sunderland_A.F.C%2e_289.45

@@ -10,8 +10,8 @@ The audio isn't the board mic, so treat this set as a complement to `eval_record
 replacement:
 - **LibriSpeech** is read audiobooks, with keywords mid-sentence ("went forward to the door"), which
   is harder than a spoken command. Compare its recall between model versions, not against board recall.
-- **AMI** is meetings recorded with a far-field table mic: conversational speech, closer to how the
-  board hears people.
+- **AMI** is meetings: conversational speech, with interruptions, overlap and fillers. It uses the
+  Mix-Headset recording, all participants' headset mics summed into one file.
 - **SWC** (Spoken Wikipedia) is about 500 volunteers reading Wikipedia articles on their own home
   mics: the widest range of voices and recording setups.
 
@@ -41,7 +41,7 @@ dataset_public/
   LibriSpeech/<split>/<spk>/<chapter>/...                  # openslr.org/12, tar -xf each split here
   librispeech_alignments/<split>/<spk>/<chapter>/*.TextGrid  # zenodo.org/records/2619474
   ami/ami_public_manual_1/                                 # AMI manual annotations
-  ami/amicorpus/<meeting>/audio/<meeting>.Array1-01.wav    # AMI audio, via download_ami.py
+  ami/amicorpus/<meeting>/audio/<meeting>.Mix-Headset.wav  # AMI audio, via download_ami.py
   swc/english/<article>/{aligned.swc,audio.ogg}            # tar -xf swc-2/SWC_English.tar -C swc
 ```
 
@@ -60,21 +60,29 @@ dataset_public/
   all splits).
 - **AMI annotations**: `ami_public_manual_1` from
   [groups.inf.ed.ac.uk/ami/download](https://groups.inf.ed.ac.uk/ami/download).
-- **AMI audio**: on the same page, select the meetings and the array mics, and it generates a
-  `amiBuild-*.wget.sh` script. Don't run that script itself: with all 16 mics it's ~163 GB.
-  `download_ami.py` takes just `Array1-01` (169 files, ~11 GB), with resume, retries and a
-  progress bar. From `HostSW/`:
+- **AMI audio**: on the same page, select the meetings and any recording, and it generates a
+  `amiBuild-*.wget.sh` script. Don't run that script itself: with all 16 array mics it's ~163 GB.
+  `download_ami.py` takes the meeting list from it and downloads just `Mix-Headset` (171 files,
+  ~11 GB), even if the script lists other recordings, with resume, retries and a progress bar.
+  From `HostSW/`:
   ```
   python EvalScripts/download_ami.py -s eval_recordings_public/amiBuild-<...>.wget.sh --dry-run
   python EvalScripts/download_ami.py -s eval_recordings_public/amiBuild-<...>.wget.sh
   ```
   If it's interrupted (Ctrl-C, timeout), run the same command again to resume.
-  - Coverage: 169 meetings, 94 h, 187 participants.
+  - Why Mix-Headset: the table-top array mic (`Array1-01`, used at first) picks up so much room
+    noise and echo that speech is only ~18 dB above the background, so it sounds distant and buried
+    even after normalising. Mix-Headset is ~35–43 dB, like LibriSpeech and SWC. `Mix-Lapel` is in
+    between. Use `--ami-channel` in `make_public_eval.py` and `--channels` in `download_ami.py` to
+    switch.
+  - Coverage: 167 meetings, 95 h, 187 participants.
   - Keywords: only 60 `forward`, 14 `backward` and 76 `stop`, so AMI is mostly useful for its
     negatives.
   - Negative excerpts must be at least 30% covered by words, so they contain someone talking rather
     than room noise boosted to speech level.
-  - AMI's far-field mic is quiet, so pieces typically get about +21 dB of gain.
+  - Pieces typically get about +10 dB of gain. The quietest meetings (TS3004a/b) need about +32 dB.
+  - One Mix-Headset file (ES2010d) is stereo, with identical channels; it's downmixed like any
+    other.
 - **SWC**: the swc-2 release from [nats.gitlab.io/swc](https://nats.gitlab.io/swc/).
   - Only `SWC_English.tar` is used (16 GB, 1,339 articles). Extract it into `dataset_public/swc/`.
     The Dutch and German tars aren't needed.
@@ -83,7 +91,9 @@ dataset_public/
     - 10 below 16 kHz.
     - Articles split over several audio files, which have no timings.
   - Only about half the words are aligned, so the script is cautious:
-    - An untimed keyword becomes an `ignore` span covering the gap where it must be.
+    - An untimed keyword becomes an `ignore` span covering the gap where it must be, plus 1 s each
+      side. The aligner often leaves no gap at all (e.g. "and stop the" with "and" and "the"
+      touching), so without the padding the span would be empty.
     - A keyword that only comes from text normalisation becomes `ignore`. For example, a `/` in a
       URL is read as "forward slash".
     - Negative excerpts must be at least 40% covered by aligned words.
@@ -102,6 +112,7 @@ python EvalScripts/make_public_eval.py --sources ami   # rebuild one source; the
 | `--max-per-keyword` | 150 | keyword occurrences per keyword per source |
 | `--max-per-speaker` | 2 | occurrences of one keyword per speaker |
 | `--ls-negative-min`, `--ami-negative-min`, `--swc-negative-min` | 120, 60, 60 | minutes of pieces with no keyword |
+| `--ami-channel` | Mix-Headset | which AMI recording to use |
 | `--level-dbfs` | −26 | RMS level each piece is normalised to |
 | `--seed` | 0 | changes which pieces are picked and the order they're in |
 
@@ -116,8 +127,10 @@ The settings are only recorded in the command, so if you change them, note it in
 | `Christopher`, `Aristophanes` | negative audio |
 | a keyword aligned shorter than 0.2 s (the aligner squeezed it, so its position is unreliable) | `ignore`, widened by 1 s each side |
 
-Excerpts that are recording dropouts (more than 5% exact zeros, or quieter than −70 dBFS) are
-skipped. ES2012c has one.
+Excerpts that contain a recording dropout are skipped: a run of exact zeros of 0.5 s or more, or an
+RMS below −70 dBFS. ES2012c has 20 s of zeros. The rule uses a run rather than the share of zero
+samples because clean recordings like AMI's Mix-Headset have many zero samples in pauses, in runs of
+at most ~10 ms.
 
 **Current build** (default settings):
 
@@ -144,9 +157,12 @@ existing build (about 2 s).
 **Warnings**, which are listed but don't fail the build:
 - A keyword span shorter than 0.2 s or longer than 2 s.
 - A keyword span more than 10 dB quieter than the 1.5 s on each side. It may be misaligned onto a pause.
-- A piece with more than +30 dB of gain, probably near-silence boosted to speech level.
+- A piece with more than +35 dB of gain, probably near-silence boosted to speech level. The
+  quietest AMI meetings legitimately need about +32 dB.
 
-The current build has one warning: a LibriSpeech `backward` in `ls_06.wav`, said quietly.
+The current build has 7 warnings, all quiet keyword spans that are real words: one LibriSpeech
+`backward` (`ls_06.wav`), and 6 AMI keywords said softly in conversation, often while someone else
+is louder.
 
 A build also reports, per source, whether it came out identical to the previous one. If it changed
 with the same settings, it warns that either the datasets changed or the build isn't reproducible.

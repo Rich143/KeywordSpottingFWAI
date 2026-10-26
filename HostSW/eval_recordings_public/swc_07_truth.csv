@@ -1,6 +1,9 @@
 start_s,end_s,label,file
-25.047081,25.437081,stop,Star_Wars%3a_Episode_II_%e2%80%93_Attack_of_the_Clones_803.91
-218.952834,219.502834,backward,Short-beaked_echidna_289.69
-235.754584,236.114584,stop,Consonant_133.63
-280.654809,280.984809,stop,Studs_Terkel_293.19
-299.939013,300.299013,stop,Rock_Springs_massacre_1691.47
+14.736834,15.286834,backward,Short-beaked_echidna_289.69
+30.746689,31.246689,forward,Battle_of_Fredericksburg_2325.57
+44.898950,45.628950,forward,Sigi_Schmid_579.95
+126.141883,126.641883,forward,Short-beaked_echidna_427.05
+176.849762,177.259762,stop,Star_Trek_II%3a_The_Wrath_of_Khan_2074.36
+199.387059,199.717059,stop,Studs_Terkel_293.19
+225.588063,225.599876,ignore,Interactive_voice_response_859.80
+232.389876,232.959876,forward,Interactive_voice_response_859.80

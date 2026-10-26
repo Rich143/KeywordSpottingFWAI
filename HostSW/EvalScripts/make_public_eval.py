@@ -8,8 +8,10 @@ Keyword positions come from the datasets' word-level time alignments, so
 nothing is labelled by hand:
   LibriSpeech  read audiobooks, ~2,400 speakers; word times from the Montreal
                Forced Aligner alignments (zenodo.org/records/2619474)
-  AMI          meetings, far-field table mic (Array1-01); word times from the
-               manual annotations (ami_public_manual_1)
+  AMI          meetings; by default the Mix-Headset recording (all participants'
+               close-talk headsets summed: the table-top array mics pick up too much
+               room noise and echo); word times from the manual annotations
+               (ami_public_manual_1)
   SWC          Spoken Wikipedia, English: ~500 volunteers reading articles on home
                mics; word times from the corpus' own alignment (aligned.swc), which
                covers about half the words
@@ -18,7 +20,7 @@ Expected layout (see eval_recordings_public/README.md for where to get it):
   dataset_public/LibriSpeech/<split>/<spk>/<chapter>/<utt>.flac + <spk>-<chapter>.trans.txt
   dataset_public/librispeech_alignments/<split>/<spk>/<chapter>/<utt>.TextGrid
   dataset_public/ami/ami_public_manual_1/{words,corpusResources}/
-  dataset_public/ami/amicorpus/<meeting>/audio/<meeting>.Array1-01.wav
+  dataset_public/ami/amicorpus/<meeting>/audio/<meeting>.<--ami-channel>.wav  (download_ami.py)
   dataset_public/swc/english/<article>/{aligned.swc,audio.ogg}   (SWC_English.tar from swc-2)
 
 Word classes (uppercased, punctuation removed):
@@ -64,7 +66,8 @@ Outputs in --out (default eval_recordings_public/):
 After a build (or with --check, on an existing build) the output is checked:
   errors    a WAV / truth file / manifest row missing, not 16 kHz mono, files that
             don't match build_info.json, pieces outside their WAV or overlapping,
-            spans outside the piece they came from, unknown labels  -> exit code 1
+            empty spans, spans outside the piece they came from, unknown labels
+            -> exit code 1
   warnings  keyword spans shorter than MIN_KEYWORD_S or longer than MAX_KEYWORD_S,
             or QUIET_SPAN_DB quieter than the audio around them (misaligned?), and
             pieces with more than HIGH_GAIN_DB of gain (boosted near-silence?)
@@ -117,7 +120,9 @@ SOURCE_NAMES = {"ls": "librispeech", "ami": "ami", "swc": "swc"}
 LS_NEGATIVES_PER_SPEAKER = 3
 EXCERPT_S = 20.0         # AMI / SWC excerpt length
 EXCERPT_EDGE_S = 2.0     # keyword at least this far inside its excerpt
-AMI_CHANNEL = "Array1-01"
+# AMI recording to use (--ami-channel). Mix-Headset: speech ~43 dB above the background,
+# like LibriSpeech; the Array1-01 table-top mic only ~18 dB
+DEFAULT_AMI_CHANNEL = "Mix-Headset"
 # Timings known to be incomplete or wrong (ami_public_manual_1/00README_MANUAL.txt)
 AMI_BAD_MEETINGS = {"EN2002a", "EN2002c", "EN2003a", "TS3009c"}
 # SWC aligns only about half the words: a negative excerpt needs aligned words covering at
@@ -126,9 +131,11 @@ SWC_MIN_COVERAGE = 0.4
 # AMI words are all timed; this keeps negatives to stretches where someone is talking,
 # rather than near-silent room noise that normalisation would boost to speech level
 AMI_MIN_COVERAGE = 0.3
-# An excerpt with more exact zeros than this, or quieter than DEAD_RMS_DBFS, is a
-# recording dropout (e.g. ES2012c), not real audio: it's skipped
-DEAD_ZERO_FRACTION = 0.05
+# An excerpt with a run of exact zeros at least this long, or quieter than DEAD_RMS_DBFS,
+# contains a recording dropout (ES2012c has 20 s of zeros), not real audio: it's skipped.
+# A run, not the share of zeros: clean recordings (AMI Mix-Headset) have many zero samples
+# in pauses, but in runs of at most ~10 ms
+DEAD_ZERO_RUN_S = 0.5
 DEAD_RMS_DBFS = -70.0
 # A keyword aligned shorter than this was squeezed by the aligner (spoken keywords take
 # 0.25 s or more), so its position can't be trusted: it becomes an 'ignore' span widened
@@ -367,15 +374,23 @@ def excerpt(source, rec, start_s, end_s):
                  start_s, end_s, spans)
 
 
+def longest_zero_run(audio):
+    """Length in samples of the longest run of exact zeros."""
+    edges = np.diff(np.concatenate([[0], (audio == 0).astype(np.int8), [0]]))
+    starts, ends = np.flatnonzero(edges == 1), np.flatnonzero(edges == -1)
+    return int((ends - starts).max()) if starts.size else 0
+
+
 def is_dead_audio(audio_path, start_s, end_s):
-    """True for a stretch that's a dropout: mostly digital zeros or near-silent."""
+    """True for a stretch with a dropout (a long run of digital zeros) or near-silence."""
     rate = sf.info(str(audio_path)).samplerate
     audio, _ = sf.read(str(audio_path), start=round(start_s * rate), stop=round(end_s * rate),
                        dtype="float32", always_2d=True)
     if audio.size == 0:
         return True
+    audio = audio.mean(axis=1)
     rms_dbfs = 20 * np.log10(np.sqrt(np.mean(audio ** 2)) + 1e-12)
-    return np.mean(audio == 0) > DEAD_ZERO_FRACTION or rms_dbfs < DEAD_RMS_DBFS
+    return longest_zero_run(audio) >= DEAD_ZERO_RUN_S * rate or rms_dbfs < DEAD_RMS_DBFS
 
 
 def overlap_s(starts, ends, start_s, end_s):
@@ -485,15 +500,15 @@ def ami_read_words(manual_root):
     return dict(meetings)
 
 
-def ami_audio_path(ami_root, meeting):
-    return ami_root / "amicorpus" / meeting / "audio" / f"{meeting}.{AMI_CHANNEL}.wav"
+def ami_audio_path(ami_root, meeting, channel):
+    return ami_root / "amicorpus" / meeting / "audio" / f"{meeting}.{channel}.wav"
 
 
-def ami_recordings(ami_root):
+def ami_recordings(ami_root, channel):
     """Meetings with audio, good timings, and a time on every keyword / ignore word."""
     recordings = []
     for meeting, words in sorted(ami_read_words(ami_root / "ami_public_manual_1").items()):
-        audio = ami_audio_path(ami_root, meeting)
+        audio = ami_audio_path(ami_root, meeting, channel)
         if meeting in AMI_BAD_MEETINGS or not audio.exists():
             continue
         if any(w.label and (w.start_s is None or w.end_s is None) for w in words):
@@ -506,9 +521,9 @@ def ami_recordings(ami_root):
 
 
 def build_ami(data_dir, args, rng):
-    recordings = ami_recordings(data_dir / "ami")
+    recordings = ami_recordings(data_dir / "ami", args.ami_channel)
     if not recordings:
-        print("  AMI: no meetings with Array1-01 audio found, skipping (run download_ami.py)")
+        print(f"  AMI: no meetings with {args.ami_channel} audio found, skipping (run download_ami.py)")
         return []
     return build_excerpts("ami", recordings, args.ami_negative_min, args, rng)
 
@@ -555,7 +570,9 @@ def swc_read_words(path, article):
 
 def fill_untimed(words, duration_s):
     """Drops untimed words, except keyword / ignore words: those can't be placed, so they
-    become an 'ignore' span covering the gap between their timed neighbours."""
+    become an 'ignore' span covering the gap between their timed neighbours, padded by
+    MISALIGNED_PAD_S each side. The neighbours often touch (the aligner left no room for
+    the word), so without the padding the span could be empty."""
     prev_end = []
     last = 0.0
     for w in words:
@@ -573,7 +590,9 @@ def fill_untimed(words, duration_s):
         if w.start_s is not None and w.end_s is not None:
             filled.append(w)
         elif w.label:
-            filled.append(TimedWord(prev_end[i], max(prev_end[i], next_start[i]), w.word, IGNORE_LABEL, w.speaker))
+            start = max(0.0, prev_end[i] - MISALIGNED_PAD_S)
+            end = min(duration_s, max(prev_end[i], next_start[i]) + MISALIGNED_PAD_S)
+            filled.append(TimedWord(start, end, w.word, IGNORE_LABEL, w.speaker))
     filled.sort(key=lambda w: w.start_s)
     return filled
 
@@ -723,7 +742,7 @@ def print_counts(name, hours, speakers, kw_counts, kw_speakers, ignores):
           + f"  ignore {ignores:4d}")
 
 
-def stats(data_dir):
+def stats(data_dir, ami_channel):
     ls_root = data_dir / "LibriSpeech"
     if ls_root.is_dir():
         print("LibriSpeech (transcripts; hours from SPEAKERS.TXT / file count, approximate):")
@@ -746,9 +765,9 @@ def stats(data_dir):
     manual_root = data_dir / "ami" / "ami_public_manual_1"
     if manual_root.is_dir():
         words_by_meeting = ami_read_words(manual_root)
-        with_audio = {m for m in words_by_meeting if ami_audio_path(data_dir / "ami", m).exists()}
+        with_audio = {m for m in words_by_meeting if ami_audio_path(data_dir / "ami", m, ami_channel).exists()}
         print(f"AMI ({len(words_by_meeting)} meetings in the annotations, {len(with_audio)} with "
-              f"{AMI_CHANNEL} audio, {len(AMI_BAD_MEETINGS)} left out for bad timings):")
+              f"{ami_channel} audio, {len(AMI_BAD_MEETINGS)} left out for bad timings):")
         for name, meetings in [("all annotated", set(words_by_meeting)), ("with audio", with_audio)]:
             meetings = meetings - AMI_BAD_MEETINGS
             kw_counts, kw_speakers = Counter(), defaultdict(set)
@@ -790,11 +809,13 @@ BUILD_INFO_NAME = "build_info.json"
 MAX_KEYWORD_S = 2.0       # a longer keyword span is probably misaligned too
 QUIET_SPAN_DB = -10.0     # keyword span this much quieter than its surroundings: misaligned?
 QUIET_CONTEXT_S = 1.5     # surroundings = this much audio either side of the span
-HIGH_GAIN_DB = 30.0       # more gain than this: probably near-silence boosted to speech level
+# More gain than this: probably near-silence boosted to speech level. The quietest AMI
+# meetings (TS3004a/b, speech peaks ~-45 dBFS) legitimately need ~32 dB
+HIGH_GAIN_DB = 35.0
 MAX_LISTED = 10           # problems listed per check (the rest are only counted)
 # Settings that change the output (written to build_info.json per source)
-BUILD_SETTINGS = ["max_per_keyword", "max_per_speaker", "ls_negative_min", "ami_negative_min",
-                  "swc_negative_min", "level_dbfs", "seed"]
+BUILD_SETTINGS = ["max_per_keyword", "max_per_speaker", "ls_negative_min", "ami_channel",
+                  "ami_negative_min", "swc_negative_min", "level_dbfs", "seed"]
 
 
 def output_files(out_dir):
@@ -822,6 +843,7 @@ def update_build_info(out_dir, args, built):
     old = read_build_info(out_dir)
     files = {p.name: file_sha256(p) for p in output_files(out_dir)}
     settings = {k: getattr(args, k) for k in BUILD_SETTINGS}
+    script = file_sha256(pathlib.Path(__file__))
 
     print("\nCompared with the previous build:")
     for source in built:
@@ -833,18 +855,22 @@ def update_build_info(out_dir, args, built):
             continue
         changed = sorted(n for n in before.keys() & after.keys() if before[n] != after[n])
         added, removed = sorted(after.keys() - before.keys()), sorted(before.keys() - after.keys())
-        same_settings = old["sources"].get(source, {}).get("settings") == settings
+        previous = old["sources"].get(source, {})
         if not (changed or added or removed):
             print(f"  {SOURCE_NAMES[source]}: identical ({len(after)} files)")
             continue
         print(f"  {SOURCE_NAMES[source]}: {len(changed)} changed, {len(added)} added, {len(removed)} removed files")
-        if same_settings:
-            print("    WARNING: same settings as before, so either the datasets changed or the "
-                  "build isn't reproducible")
+        if previous.get("settings") != settings:
+            print("    (settings changed)")
+        elif previous.get("script_sha256") != script:
+            print("    (make_public_eval.py changed since the previous build)")
+        else:
+            print("    WARNING: same settings and script as before, so either the datasets changed "
+                  "or the build isn't reproducible")
 
     sources = dict(old["sources"])
     for source in built:
-        sources[source] = {"settings": settings}
+        sources[source] = {"settings": settings, "script_sha256": script}
     info = {"sources": dict(sorted(sources.items())), "files": files}
     (out_dir / BUILD_INFO_NAME).write_text(json.dumps(info, indent=1) + "\n")
 
@@ -932,6 +958,8 @@ def check_build(out_dir):
         for span in spans:
             start, end, label = float(span["start_s"]), float(span["end_s"]), span["label"]
             where = f"{wav_name} @{start:.2f}s {label} ({span['file']})"
+            if end <= start:
+                report.add("error", "empty or reversed span", f"{where}: {start:.6f}-{end:.6f}s")
             # Inside the piece it says it came from
             if not any(p["piece_id"] == span["file"] and float(p["start_s"]) - 1e-6 <= start
                        and end <= float(p["end_s"]) + 1e-6 for p in pieces):
@@ -978,7 +1006,7 @@ def check_build(out_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Build eval WAVs + truth CSVs from LibriSpeech and AMI word alignments."
+        description="Build eval WAVs + truth CSVs from LibriSpeech, AMI and Spoken Wikipedia word alignments."
     )
     parser.add_argument("--data-dir", type=pathlib.Path, default=DEFAULT_DATA_DIR,
                         help=f"public datasets dir (default: {DEFAULT_DATA_DIR})")
@@ -995,6 +1023,9 @@ def parse_args():
                         help="occurrences of one keyword per speaker (default: 2)")
     parser.add_argument("--ls-negative-min", type=float, default=120,
                         help="minutes of LibriSpeech utterances without keywords (default: 120)")
+    parser.add_argument("--ami-channel", default=DEFAULT_AMI_CHANNEL,
+                        help=f"AMI recording to use, e.g. Mix-Headset, Mix-Lapel, Array1-01 "
+                             f"(default: {DEFAULT_AMI_CHANNEL})")
     parser.add_argument("--ami-negative-min", type=float, default=60,
                         help="minutes of AMI excerpts without keywords (default: 60)")
     parser.add_argument("--swc-negative-min", type=float, default=60,
@@ -1009,7 +1040,7 @@ def main():
     args = parse_args()
     args.data_dir = args.data_dir.resolve()
     if args.stats:
-        stats(args.data_dir)
+        stats(args.data_dir, args.ami_channel)
         return
     if args.check:
         sys.exit(1 if check_build(args.out) else 0)

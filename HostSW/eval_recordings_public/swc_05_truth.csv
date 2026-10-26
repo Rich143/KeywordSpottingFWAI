@@ -1,7 +1,7 @@
 start_s,end_s,label,file
-11.500805,11.750805,stop,Milgram_experiment_213.84
-15.380805,15.750805,stop,Milgram_experiment_213.84
-77.033325,77.443325,stop,Star_Trek_II%3a_The_Wrath_of_Khan_2074.36
-95.947922,96.467922,forward,Vowel_142.38
-121.444541,121.784541,forward,Andalusian_horse_393.93
-298.873107,299.193107,stop,Boshin_War_899.59
+9.748573,10.148573,forward,Daylight_saving_time_1518.29
+17.948573,18.578573,backward,Daylight_saving_time_1518.29
+144.389153,144.659153,stop,Podcast_1280.38
+172.523697,172.823697,stop,The_World_Without_Us_781.59
+243.054422,243.574422,forward,Vowel_142.38
+309.974166,310.314166,forward,Andalusian_horse_393.93

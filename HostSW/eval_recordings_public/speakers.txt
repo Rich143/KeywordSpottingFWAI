@@ -32,7 +32,6 @@ ami FEE030
 ami FEE032
 ami FEE036
 ami FEE037
-ami FEE038
 ami FEE039
 ami FEE040
 ami FEE041
@@ -53,6 +52,7 @@ ami FEE060
 ami FEE064
 ami FEE078
 ami FEE080
+ami FEE081
 ami FEE083
 ami FEE085
 ami FEE087
@@ -61,6 +61,8 @@ ami FEE096
 ami FEO023
 ami FEO026
 ami FEO065
+ami FEO066
+ami FEO070
 ami FEO072
 ami FEO079
 ami FIE037
@@ -78,6 +80,7 @@ ami FIO093
 ami FTD019UID
 ami IB4001
 ami IB4002
+ami IB4003
 ami IB4004
 ami IB4005
 ami IB4010
@@ -103,10 +106,8 @@ ami IS1007
 ami IS1008
 ami IS1009
 ami MEE006
-ami MEE007
 ami MEE008
 ami MEE009
-ami MEE010
 ami MEE011
 ami MEE012
 ami MEE014
@@ -140,6 +141,7 @@ ami MEO069
 ami MEO082
 ami MIE002
 ami MIE029
+ami MIE032
 ami MIE034
 ami MIE080
 ami MIE083
@@ -154,12 +156,12 @@ ami MIO019
 ami MIO020
 ami MIO022
 ami MIO023
-ami MIO024
 ami MIO025
 ami MIO026
 ami MIO031
 ami MIO035
 ami MIO036
+ami MIO039
 ami MIO040
 ami MIO043
 ami MIO046
@@ -167,7 +169,6 @@ ami MIO047
 ami MIO049
 ami MIO050
 ami MIO055
-ami MIO066
 ami MIO072
 ami MIO075
 ami MIO076
@@ -184,6 +185,7 @@ ami MIO099
 ami MIO100
 ami MIO101
 ami MIO104
+ami MTD0010ID
 ami MTD009PM
 ami MTD011UID
 ami MTD012ME
@@ -217,7 +219,6 @@ ami MTD040ME
 ami MTD041PM
 ami MTD042ID
 ami MTD043UID
-ami MTD044ME
 ami MTD045PM
 ami MTD046ID
 ami MTD047UID
@@ -1162,6 +1163,7 @@ swc goh_wz
 swc gonknet
 swc gonzonoir
 swc gorillawarfare
+swc hajenso
 swc hassocks5489
 swc honinbou
 swc iceflow
@@ -1186,7 +1188,6 @@ swc laurascudder
 swc learnoutloud.com
 swc leotohill
 swc liamkeanedotcom
-swc literatpj
 swc liverpudlian100
 swc ljl
 swc luigi30
@@ -1218,6 +1219,7 @@ swc original_uploadermangstwikipediaen
 swc original_uploadermantisianwikipediaen
 swc original_uploaderrabiddog51sbwikipediaen
 swc original_uploaderreason_turns_rancidwikipediaen
+swc original_uploadersophiewikipediaen
 swc original_uploaderthe_jacobinwikipediaen
 swc original_uploadertheroachyjaywikipediaen
 swc original_uploaderurbanxplorerwikipediaen
@@ -1274,7 +1276,6 @@ swc triacylglyceride
 swc two2thehead
 swc uk-logician-2006
 swc unknown-Antidisestablishmentarianism
-swc unknown-Bicycle_lighting
 swc unknown-Blue_Bridge_(Saint_Petersburg)
 swc unknown-Boshin_War
 swc unknown-British_Empire
@@ -1284,7 +1285,6 @@ swc unknown-Carrier_wave
 swc unknown-China%e2%80%93Laos_relations
 swc unknown-Climate_change
 swc unknown-Creagerstown%2c_Maryland
-swc unknown-Custom_Robo
 swc unknown-Demon_Cat
 swc unknown-Eppertshausen
 swc unknown-Flood_(Halo)
@@ -1331,6 +1331,7 @@ swc valerieinto
 swc viktor_o._ledenyov
 swc vneiomazza
 swc warmvoiceover
+swc whouk
 swc wikifier
 swc witbcoedus
 swc wodup

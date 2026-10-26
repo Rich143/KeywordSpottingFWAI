@@ -1,5 +1,8 @@
 start_s,end_s,label,file
-7.769629,8.129629,forward,Yttrium_1611.46
-239.670651,240.150651,forward,Grim_Fandango_191.90
-252.772564,253.242564,backward,Grandfather_paradox_176.28
-273.594426,274.154426,stop,Fentanyl_1111.67
+45.318168,45.658168,stop,1995_Japanese_Grand_Prix_570.56
+50.718168,51.208168,ignore,1995_Japanese_Grand_Prix_570.56
+76.127429,76.857429,backward,Kevin_Bowyer_182.95
+95.874045,96.404045,stop,Vaughan_Metropolitan_Centre_station_280.05
+103.164045,103.614045,stop,Vaughan_Metropolitan_Centre_station_280.05
+132.579650,132.939650,stop,Final_Fantasy_VI_1429.67
+168.482191,168.842191,forward,Yttrium_1611.46
