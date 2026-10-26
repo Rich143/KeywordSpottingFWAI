@@ -1,7 +1,7 @@
 start_s,end_s,label,file
-175.994871,176.524871,backward,Bicycle_862.80
-193.847218,194.327218,backward,SeaMonkey_66.39
-240.097178,240.417178,stop,Star_Trek_911.55
-255.328480,255.618480,stop,Harvey_Milk_3373.45
-283.249451,283.639451,stop,Introduction_to_viruses_2027.02
-302.189861,302.689861,forward,Sunderland_A.F.C%2e_289.45
+14.959339,15.509339,forward,Star_Trek_II%3a_The_Wrath_of_Khan_555.15
+28.677668,29.267668,forward,2012_phenomenon_1151.85
+237.230121,237.760121,backward,Bicycle_862.80
+260.994209,261.544209,backward,Short-beaked_echidna_289.69
+299.006554,299.226554,stop,Florida_Highway_Patrol_1874.65
+305.756554,307.848187,ignore,Florida_Highway_Patrol_1874.65

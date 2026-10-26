@@ -1,8 +1,9 @@
 start_s,end_s,label,file
-45.318168,45.658168,stop,1995_Japanese_Grand_Prix_570.56
-50.718168,51.208168,ignore,1995_Japanese_Grand_Prix_570.56
-76.127429,76.857429,backward,Kevin_Bowyer_182.95
-95.874045,96.404045,stop,Vaughan_Metropolitan_Centre_station_280.05
-103.164045,103.614045,stop,Vaughan_Metropolitan_Centre_station_280.05
-132.579650,132.939650,stop,Final_Fantasy_VI_1429.67
-168.482191,168.842191,forward,Yttrium_1611.46
+30.020076,30.370076,forward,British_Empire_3783.70
+45.198419,45.528419,stop,Harvey_Milk_2949.62
+120.485608,120.715608,stop,Learned_helplessness_238.21
+122.375608,123.056375,ignore,Learned_helplessness_238.21
+139.372413,140.242413,backward,McGillicuddy_Serious_Party_278.10
+158.673997,159.033997,stop,Zinc_3636.45
+177.161499,177.471499,stop,Exmoor_1456.37
+210.034570,210.544570,forward,Simon_Kuznets_746.03

@@ -1,7 +1,8 @@
 start_s,end_s,label,file
-9.748573,10.148573,forward,Daylight_saving_time_1518.29
-17.948573,18.578573,backward,Daylight_saving_time_1518.29
-144.389153,144.659153,stop,Podcast_1280.38
-172.523697,172.823697,stop,The_World_Without_Us_781.59
-243.054422,243.574422,forward,Vowel_142.38
-309.974166,310.314166,forward,Andalusian_horse_393.93
+71.486948,71.886948,forward,Daylight_saving_time_1518.29
+79.686948,80.316948,backward,Daylight_saving_time_1518.29
+102.126483,102.656483,stop,Vaughan_Metropolitan_Centre_station_280.05
+109.416483,109.866483,stop,Vaughan_Metropolitan_Centre_station_280.05
+132.175001,132.675001,stop,Compact_Cassette_2700.63
+280.640368,280.890368,stop,Milgram_experiment_213.84
+284.520368,284.890368,stop,Milgram_experiment_213.84

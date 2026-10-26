@@ -1172,7 +1172,6 @@ swc incledon
 swc jackpotden
 swc jasonlamarche
 swc jdoorjam
-swc jebjoya
 swc johnrpenner
 swc jonjalin
 swc jormallester
@@ -1321,6 +1320,7 @@ swc unknown-Sushi_Pack
 swc unknown-The_Thriving_Cult_of_Greed_and_Power
 swc unknown-The_Wonderful_Wizard_of_Oz
 swc unknown-Titanium
+swc unknown-Toilets_in_Japan
 swc unknown-Transport_in_Laos
 swc unknown-Ulysses_(poem)
 swc unknown-WWE_Cruiserweight_Championship_(1991%e2%80%932007)
@@ -1331,6 +1331,7 @@ swc valerieinto
 swc viktor_o._ledenyov
 swc vneiomazza
 swc warmvoiceover
+swc warpig1994
 swc whouk
 swc wikifier
 swc witbcoedus

@@ -1,8 +1,9 @@
 start_s,end_s,label,file
-28.170852,28.510852,stop,Laika_415.27
-50.719328,51.419328,forward,Falcon%27s_Fury_242.81
-71.823545,72.143545,stop,Boshin_War_899.59
-178.115087,178.815087,stop,Cory_Booker_1224.95
-180.565087,181.075087,stop,Cory_Booker_1224.95
-220.574208,220.864208,stop,Terry_Fox_1132.97
-268.367547,268.817547,stop,Wiki_775.91
+12.959602,13.299602,stop,Pierre_Trudeau_1131.07
+28.876119,29.346119,forward,Execution_by_elephant_878.72
+76.982445,77.512445,stop,Compact_Cassette_1617.71
+158.517356,159.077356,forward,Battle_of_the_Somme_1515.78
+168.163347,168.703347,stop,Flood_(Halo)_651.03
+172.593347,173.073347,ignore,Flood_(Halo)_651.03
+202.391129,202.891129,forward,Vaughan_258.85
+274.786502,275.206502,stop,George_Gamow_1235.07

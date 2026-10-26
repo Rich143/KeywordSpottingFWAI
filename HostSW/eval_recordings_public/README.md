@@ -24,7 +24,7 @@ Wikipedia user names.
 | File | |
 |---|---|
 | `ls_<nn>_truth.csv`, `ami_<nn>_truth.csv`, `swc_<nn>_truth.csv` | keyword and `ignore` spans; `file` = source utterance / excerpt |
-| `manifest.csv` | every piece: its position in which WAV, source file and time range, speakers, gain |
+| `manifest.csv` | every piece: its position in which WAV, source file and time range, speakers, `gain_db` (static gain), `limit_db` (largest peak reduction by the limiter, 0 if untouched) |
 | `speakers.txt` | speakers (and AMI meeting series) to keep out of training |
 | `build_info.json` | each source's build settings and the SHA-256 of every output file, WAVs included |
 
@@ -80,7 +80,8 @@ dataset_public/
     negatives.
   - Negative excerpts must be at least 30% covered by words, so they contain someone talking rather
     than room noise boosted to speech level.
-  - Pieces typically get about +10 dB of gain. The quietest meetings (TS3004a/b) need about +32 dB.
+  - Each meeting gets its own gain, from −9.5 to +28 dB (median +11 dB), because the meetings were
+    recorded at levels ~30 dB apart. The quietest meetings are TS3004a/b.
   - One Mix-Headset file (ES2010d) is stereo, with identical channels; it's downmixed like any
     other.
 - **SWC**: the swc-2 release from [nats.gitlab.io/swc](https://nats.gitlab.io/swc/).
@@ -113,7 +114,7 @@ python EvalScripts/make_public_eval.py --sources ami   # rebuild one source; the
 | `--max-per-speaker` | 2 | occurrences of one keyword per speaker |
 | `--ls-negative-min`, `--ami-negative-min`, `--swc-negative-min` | 120, 60, 60 | minutes of pieces with no keyword |
 | `--ami-channel` | Mix-Headset | which AMI recording to use |
-| `--level-dbfs` | −26 | RMS level each piece is normalised to |
+| `--level-dbfs` | −21 | median active-speech level of each source (the board recordings' level) |
 | `--seed` | 0 | changes which pieces are picked and the order they're in |
 
 The settings are only recorded in the command, so if you change them, note it in the snapshot notes.
@@ -127,6 +128,31 @@ The settings are only recorded in the command, so if you change them, note it in
 | `Christopher`, `Aristophanes` | negative audio |
 | a keyword aligned shorter than 0.2 s (the aligner squeezed it, so its position is unreliable) | `ignore`, widened by 1 s each side |
 
+**Level.** The aim is to match the board on average while keeping natural variation, so that the
+set also tests how the model copes with loud and soft speech:
+- **Gain:** each piece has its DC removed, then gets one static gain per source. AMI gets one per
+  meeting instead, since its meetings were recorded about 30 dB apart and the board's mic gain is
+  fixed.
+- **Target:** the gain is chosen so the source's median *active-speech level* is `--level-dbfs`.
+  Active speech is the loudest 30% of 20 ms frames, so pauses don't count. The default of −21 dBFS
+  is the board recordings' active-speech level (−19 to −22.6 dBFS).
+- **Spread:** loudness still varies within each source, 5th to 95th percentile:
+
+  | Source | Spread |
+  |---|---|
+  | LibriSpeech | 9 dB |
+  | AMI | 12 dB |
+  | SWC | 20 dB |
+
+  Neighbouring pieces are almost always different speakers, separated by a gap, so a level change
+  sounds like a new person or someone at a different distance.
+- **Limiter:** a look-ahead peak limiter keeps every sample at or below −1 dBFS. It lowers the
+  gain only within about 10 ms of a peak, so the speech keeps its level, and pieces without peaks
+  are untouched. It acts on about 6% of pieces, mostly breath pops in the AMI headsets and SWC
+  recordings that were made loud.
+- **Keywords:** they come out around −25 dBFS. That's quieter than on the board (−20), because
+  here they're ordinary words in the middle of sentences, not stressed commands.
+
 Excerpts that contain a recording dropout are skipped: a run of exact zeros of 0.5 s or more, or an
 RMS below −70 dBFS. ES2012c has 20 s of zeros. The rule uses a run rather than the share of zero
 samples because clean recordings like AMI's Mix-Headset have many zero samples in pauses, in runs of
@@ -138,8 +164,8 @@ at most ~10 ms.
 |---|---|---|---|---|---|---|---|
 | LibriSpeech | 43 | 219 | 91 | 871 | 150 | 153 | 151 |
 | AMI | 20 | 102 | 40 | 176 | 53 | 14 | 70 |
-| SWC | 24 | 122 | 59 | 234 | 68 | 24 | 89 |
-| **Total** | 87 | 443 | 190 | ~1,280 | 271 | 191 | 310 |
+| SWC | 24 | 122 | 59 | 235 | 66 | 25 | 90 |
+| **Total** | 87 | 443 | 190 | ~1,280 | 269 | 192 | 311 |
 
 ## 3. Check
 
@@ -151,6 +177,7 @@ existing build (about 2 s).
 - A WAV isn't 16 kHz mono.
 - A file doesn't match the hash in `build_info.json`, e.g. a stale WAV or a hand-edited truth file.
 - A piece lies outside its WAV, or two pieces overlap.
+- A peak is above −1 dBFS, which would mean the limiter failed.
 - A span lies outside the piece it came from.
 - A label is unknown.
 
@@ -158,7 +185,11 @@ existing build (about 2 s).
 - A keyword span shorter than 0.2 s or longer than 2 s.
 - A keyword span more than 10 dB quieter than the 1.5 s on each side. It may be misaligned onto a pause.
 - A piece with more than +35 dB of gain, probably near-silence boosted to speech level. The
-  quietest AMI meetings legitimately need about +32 dB.
+  quietest AMI meetings need about +28 dB.
+- A source's median speech level is more than 1 dB from the target it was built with.
+
+It also prints each source's speech-level spread, and how many pieces the limiter touched and by
+how much.
 
 The current build has 7 warnings, all quiet keyword spans that are real words: one LibriSpeech
 `backward` (`ls_06.wav`), and 6 AMI keywords said softly in conversation, often while someone else

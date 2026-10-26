@@ -50,9 +50,14 @@ Pieces:
                files (no timings) or that libsndfile can't open are skipped.
 
 Each source's pieces are shuffled together and packed into ~5 minute files
-(ls_<nn>.wav, ami_<nn>.wav, swc_<nn>.wav), each piece RMS-normalised to --level-dbfs and
-separated by short gaps of very quiet noise. The same arguments always give
-the same files.
+(ls_<nn>.wav, ami_<nn>.wav, swc_<nn>.wav), separated by short gaps of very quiet
+noise. The same arguments always give the same files.
+
+Level: each piece has its DC removed, then gets one static gain per source (AMI: per
+meeting, since its meetings were recorded ~30 dB apart), chosen so the source's median
+active-speech level (loudest 30% of 20 ms frames) is --level-dbfs, the board's level.
+The natural loudness spread inside a source is kept. A peak limiter then keeps every
+sample at or below -1 dBFS by lowering the gain only around the peaks.
 
 Outputs in --out (default eval_recordings_public/):
   <stem>.wav          16 kHz, 16-bit mono (gitignored: rebuild instead)
@@ -66,11 +71,13 @@ Outputs in --out (default eval_recordings_public/):
 After a build (or with --check, on an existing build) the output is checked:
   errors    a WAV / truth file / manifest row missing, not 16 kHz mono, files that
             don't match build_info.json, pieces outside their WAV or overlapping,
-            empty spans, spans outside the piece they came from, unknown labels
-            -> exit code 1
+            a peak above PEAK_LIMIT_DBFS, empty spans, spans outside the piece
+            they came from, unknown labels  -> exit code 1
   warnings  keyword spans shorter than MIN_KEYWORD_S or longer than MAX_KEYWORD_S,
             or QUIET_SPAN_DB quieter than the audio around them (misaligned?), and
-            pieces with more than HIGH_GAIN_DB of gain (boosted near-silence?)
+            pieces with more than HIGH_GAIN_DB of gain (boosted near-silence?), and a
+            source median speech level more than 1 dB from the target
+It also prints each source's speech-level spread and how many pieces the limiter touched.
 A build also reports, per source, whether it came out identical to the previous
 build (build_info.json), and warns if it didn't with the same settings.
 
@@ -94,6 +101,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 
 import numpy as np
+import scipy.ndimage
 import scipy.signal
 import soundfile as sf
 
@@ -147,7 +155,22 @@ SWC_USER = re.compile(r"User(?:[ _]talk)?:([^|\]/]+)", re.I)
 FILE_TARGET_S = 300.0
 GAP_S = (0.2, 0.8)
 GAP_NOISE_DBFS = -70.0
+
+# Level. Each source gets one gain (AMI: one per meeting, since its meetings were recorded
+# at levels ~30 dB apart), set so the source's median active-speech level is --level-dbfs.
+# That keeps the natural loudness spread inside a source while every source's average
+# matches the board. Default: the board recordings' active-speech level (-19..-22.6 dBFS).
+DEFAULT_LEVEL_DBFS = -21.0
+LEVEL_PER_RECORDING = {"ami"}
+# Active-speech level: mean power of the loudest ACTIVE_TOP_SHARE of ACTIVE_FRAME_S frames,
+# DC removed per frame, so pauses (and the board's drifting DC offset) don't count
+ACTIVE_FRAME_S = 0.02
+ACTIVE_TOP_SHARE = 0.3
+# Peak limiter: where the gain would push a sample above PEAK_LIMIT_DBFS, the gain is
+# lowered only around that peak (look-ahead window +-LIMITER_WINDOW_S, smoothed over the same),
+# instead of clipping it or turning the whole piece down
 PEAK_LIMIT_DBFS = -1.0
+LIMITER_WINDOW_S = 0.005
 
 OUTPUT_NAME = re.compile(r"^(ls|ami|swc)_\d+(\.wav|_truth\.csv)$")
 
@@ -649,17 +672,55 @@ def load_piece(piece):
     return audio
 
 
-def normalise(audio, level_dbfs):
-    """Removes DC, scales to level_dbfs RMS, then lowers the gain if a peak would pass
-    PEAK_LIMIT_DBFS. Returns (audio, gain_db)."""
-    audio = audio - audio.mean()
-    rms = np.sqrt(np.mean(audio ** 2))
-    if rms == 0:
+def active_speech_db(audio):
+    """Speech level ignoring pauses: mean power of the loudest ACTIVE_TOP_SHARE of
+    ACTIVE_FRAME_S frames, with DC removed per frame."""
+    n = round(ACTIVE_FRAME_S * SAMPLE_RATE_HZ)
+    frames = audio[: len(audio) // n * n].reshape(-1, n)
+    if frames.size == 0:
+        return -240.0
+    power = np.sort(((frames - frames.mean(axis=1, keepdims=True)) ** 2).mean(axis=1))
+    top = power[-max(1, round(ACTIVE_TOP_SHARE * len(power))):]
+    return float(10 * np.log10(np.mean(top) + 1e-12))
+
+
+def limit_peaks(audio, limit_dbfs=PEAK_LIMIT_DBFS):
+    """Look-ahead peak limiter: keeps every sample at or below limit_dbfs by lowering the
+    gain only around the peaks. The gain each sample needs is minimum-filtered over
+    +-LIMITER_WINDOW_S (so it drops before a peak arrives), then averaged over the same
+    window (a smooth ramp). Every value the average uses is at most the gain the peak
+    needs, so it can't overshoot. Returns (audio, largest reduction in dB)."""
+    limit = 10 ** (limit_dbfs / 20)
+    need = np.minimum(1.0, limit / np.maximum(np.abs(audio), 1e-12))
+    if need.min() >= 1.0:
         return audio, 0.0
-    gain = 10 ** (level_dbfs / 20) / rms
-    peak = np.max(np.abs(audio))
-    gain = min(gain, 10 ** (PEAK_LIMIT_DBFS / 20) / peak)
-    return audio * gain, 20 * np.log10(gain)
+    width = 2 * round(LIMITER_WINDOW_S * SAMPLE_RATE_HZ) + 1
+    gain = scipy.ndimage.uniform_filter1d(scipy.ndimage.minimum_filter1d(need, width, mode="nearest"),
+                                          width, mode="nearest")
+    gain = np.minimum(gain, need)   # guards against float rounding in the average
+    return (audio * gain).astype(np.float32), float(-20 * np.log10(gain.min()))
+
+
+def piece_gains(source, pieces, level_dbfs):
+    """Static gain in dB per piece_id: one per source, or one per recording for sources in
+    LEVEL_PER_RECORDING (from the whole recording's active-speech level), shifted so the
+    source's median piece active-speech level is level_dbfs."""
+    levels = {}
+    for piece in pieces:
+        audio = load_piece(piece)
+        levels[piece.piece_id] = active_speech_db(audio - audio.mean())
+    offsets = {}
+    if source in LEVEL_PER_RECORDING:
+        recording_db = {}
+        for piece in pieces:
+            if piece.audio_path not in recording_db:
+                audio, _ = sf.read(str(piece.audio_path), dtype="float32", always_2d=True)
+                recording_db[piece.audio_path] = active_speech_db(audio.mean(axis=1))
+            offsets[piece.piece_id] = -recording_db[piece.audio_path]
+    else:
+        offsets = {p.piece_id: 0.0 for p in pieces}
+    shift = level_dbfs - float(np.median([levels[k] + offsets[k] for k in levels]))
+    return {k: offsets[k] + shift for k in levels}
 
 
 def assemble(source, pieces, out_dir, args, rng):
@@ -678,6 +739,7 @@ def assemble(source, pieces, out_dir, args, rng):
         else:
             files.append(current)
 
+    gains_db = piece_gains(source, pieces, args.level_dbfs)
     noise_sigma = 10 ** (GAP_NOISE_DBFS / 20)
     manifest = []
     for n, file_pieces in enumerate(files):
@@ -690,7 +752,9 @@ def assemble(source, pieces, out_dir, args, rng):
         pos = len(chunks[0])
         truth = []
         for piece in file_pieces:
-            audio, gain_db = normalise(load_piece(piece), args.level_dbfs)
+            audio = load_piece(piece)
+            gain_db = gains_db[piece.piece_id]
+            audio, limit_db = limit_peaks((audio - audio.mean()) * np.float32(10 ** (gain_db / 20)))
             offset_s = pos / SAMPLE_RATE_HZ
             for start_s, end_s, label in piece.spans:
                 truth.append((offset_s + start_s, offset_s + end_s, label, piece.piece_id))
@@ -702,7 +766,7 @@ def assemble(source, pieces, out_dir, args, rng):
                 "keywords": " ".join(piece.keywords),
                 "src_file": str(piece.audio_path.relative_to(args.data_dir)),
                 "src_start_s": f"{piece.start_s:.3f}", "src_end_s": f"{piece.end_s:.3f}",
-                "gain_db": f"{gain_db:.2f}",
+                "gain_db": f"{gain_db:.2f}", "limit_db": f"{limit_db:.2f}",
             })
             g = gap()
             chunks += [audio, g]
@@ -927,6 +991,7 @@ def check_build(out_dir):
                   if OUTPUT_NAME.match(p.name)}
 
     per_source = defaultdict(Counter)
+    levels = defaultdict(list)
     for wav_name in sorted(set(pieces_by_wav) | truth_wavs):
         source = wav_name.split("_")[0]
         wav, truth = out_dir / wav_name, out_dir / wav_name.replace(".wav", "_truth.csv")
@@ -952,6 +1017,13 @@ def check_build(out_dir):
                 report.add("error", "piece outside its WAV", f"{wav_name} {piece['piece_id']} {start:.2f}-{end:.2f}s")
             if prev and start < float(prev["end_s"]) - 1e-6:
                 report.add("error", "pieces overlap", f"{wav_name} {prev['piece_id']} / {piece['piece_id']}")
+            # Level: active speech for the per-source spread; peaks must be below the limiter's ceiling
+            x = audio[round(start * rate):round(end * rate)]
+            levels[source].append(active_speech_db(x))
+            peak_db = 20 * np.log10(np.abs(x).max() + 1e-12) if x.size else -240.0
+            if peak_db > PEAK_LIMIT_DBFS + 0.01:
+                report.add("error", f"peak above {PEAK_LIMIT_DBFS:g} dBFS (limiter failed?)",
+                           f"{wav_name} {piece['piece_id']}: {peak_db:+.2f} dBFS")
 
         with open(truth, newline="") as f:
             spans = list(csv.DictReader(f))
@@ -983,11 +1055,19 @@ def check_build(out_dir):
                            f"{QUIET_CONTEXT_S:g} s around it", f"{where}: {relative_db:+.1f} dB")
 
     # Gain: large values mean a quiet source; very large ones near-silence boosted to speech level
-    gains = defaultdict(list)
+    gains, limits = defaultdict(list), defaultdict(list)
     for r in manifest:
         gains[r["wav"].split("_")[0]].append(float(r["gain_db"]))
+        limits[r["wav"].split("_")[0]].append(float(r.get("limit_db") or 0))
         if float(r["gain_db"]) > HIGH_GAIN_DB:
             report.add("warning", f"gain above {HIGH_GAIN_DB:g} dB", f"{r['wav']} {r['piece_id']}: {r['gain_db']} dB")
+    # Each source's median speech level should be the target it was built with
+    built_with = read_build_info(out_dir)["sources"]
+    for source, lv in levels.items():
+        target = built_with.get(source, {}).get("settings", {}).get("level_dbfs")
+        if target is not None and abs(np.median(lv) - target) > 1.0:
+            report.add("warning", "source median speech level more than 1 dB from target",
+                       f"{SOURCE_NAMES.get(source, source)}: {np.median(lv):.1f} dBFS, built for {target:g}")
 
     print(f"  {'source':<12} {'files':>5} {'min':>6}  " + "  ".join(f"{k:>8}" for k in KEYWORDS + [IGNORE_LABEL])
           + "   gain dB: min / median / max")
@@ -996,6 +1076,12 @@ def check_build(out_dir):
         print(f"  {SOURCE_NAMES.get(source, source):<12} {c['files']:5d} {c['seconds'] / 60:6.1f}  "
               + "  ".join(f"{c[k]:8d}" for k in KEYWORDS + [IGNORE_LABEL])
               + (f"   {g.min():+.1f} / {np.median(g):+.1f} / {g.max():+.1f}" if g.size else ""))
+    print(f"  {'source':<12} active speech dBFS 5% / 50% / 95% (spread)   pieces limited, largest reduction")
+    for source in sorted(levels):
+        p5, p50, p95 = np.percentile(levels[source], [5, 50, 95])
+        lim = np.array(limits[source])
+        print(f"  {SOURCE_NAMES.get(source, source):<12} {p5:7.1f} / {p50:6.1f} / {p95:6.1f}  ({p95 - p5:4.1f} dB)"
+              f"{'':9s}{int(np.sum(lim > 0)):4d} of {len(lim)}, {lim.max() if lim.size else 0:.1f} dB")
     report.print()
     errors, warnings = report.count("error"), report.count("warning")
     print(f"  {errors} errors, {warnings} warnings" + ("" if errors else " (OK)"))
@@ -1030,8 +1116,9 @@ def parse_args():
                         help="minutes of AMI excerpts without keywords (default: 60)")
     parser.add_argument("--swc-negative-min", type=float, default=60,
                         help="minutes of SWC excerpts without keywords (default: 60)")
-    parser.add_argument("--level-dbfs", type=float, default=-26.0,
-                        help="RMS level each piece is normalised to (default: -26)")
+    parser.add_argument("--level-dbfs", type=float, default=DEFAULT_LEVEL_DBFS,
+                        help=f"median active-speech level of each source (default: {DEFAULT_LEVEL_DBFS:g}, "
+                             f"the board recordings' level)")
     parser.add_argument("--seed", type=int, default=0, help="random seed (default: 0)")
     return parser.parse_args()
 
