@@ -35,13 +35,12 @@ Alignments that can't be trusted become 'ignore' too:
   - SWC: a keyword produced by text normalisation ('/' is read as "forward slash")
 
 Pieces:
-  LibriSpeech  whole utterances (~13 s). Keyword utterances are picked
-               round-robin over speakers, at most --max-per-speaker per speaker
-               and --max-per-keyword per keyword. Negative utterances have no
-               keyword and no ignore word, at most 3 per speaker, up to
-               --ls-negative-min minutes.
+  LibriSpeech  whole utterances (~13 s). Every keyword utterance of the split's speakers
+               is used (--max-per-speaker / --max-per-keyword can limit them). Negative
+               utterances have no keyword and no ignore word, at most
+               LS_NEGATIVES_PER_SPEAKER per speaker, up to --ls-negative-min minutes.
   AMI, SWC     20 s excerpts. Each keyword gets an excerpt that contains it at a
-               random offset (overlapping excerpts are merged), with the same caps.
+               random offset (overlapping excerpts are merged), with the same limits.
                Negative excerpts contain no keyword or ignore word, up to
                --ami-negative-min / --swc-negative-min minutes, spread round-robin
                over meetings / readers. SWC negatives must be at least
@@ -59,24 +58,43 @@ active-speech level (loudest 30% of 20 ms frames) is --level-dbfs, the board's l
 The natural loudness spread inside a source is kept. A peak limiter then keeps every
 sample at or below -1 dBFS by lowering the gain only around the peaks.
 
-Outputs in --out (default eval_recordings_public/):
-  <stem>.wav          16 kHz, 16-bit mono (gitignored: rebuild instead)
-  <stem>_truth.csv    start_s, end_s, label, file   (file = source utterance / excerpt id)
-  manifest.csv        one row per piece: where it is in which WAV, and where it came from
-  build_info.json     settings of each source's build and the SHA-256 of every output file
-  speakers.txt        every speaker used. Never train on these speakers (AMI: whole
-                      meeting series, since the same people are in each meeting;
-                      SWC: Wikipedia user names of the readers)
+Train / val / test split (by speaker, so no voice is in two splits): every group goes to
+one split, ~50 / 25 / 25% of each keyword and of the utterances / recordings, assigned
+greedily biggest group first. Groups:
+  LibriSpeech  speaker
+  SWC          reader (Wikipedia user name)
+  AMI          meetings linked by any shared participant (connected components): the same
+               people are in every meeting of a series, and 30 people are in more than one
+Train is reserved for training (not built here); val and test are each built as above.
 
-After a build (or with --check, on an existing build) the output is checked:
+Outputs in --out (default eval_recordings_public/):
+  splits.csv            one row per group: source, group, split, members (the speakers /
+                        readers / meetings in it), items, keyword counts. Only groups with
+                        split = train may ever be trained on
+  <split>/              val/ and test/, each with:
+    <stem>.wav          16 kHz, 16-bit mono (gitignored: rebuild instead)
+    <stem>_truth.csv    start_s, end_s, label, file   (file = source utterance / excerpt id)
+    manifest.csv        one row per piece: where it is in which WAV, and where it came from
+    clips/<label>/      1 s clips cut from the WAVs: one per keyword (centred on the word,
+                        or shifted to the piece's edge where that's the source's edge),
+                        and CLIPS_OTHER_PER_KEYWORD x as many 'other' (speech, no keyword)
+    clips.csv           one row per clip: file, label, where it's from (and the word's span)
+    build_info.json     settings of each source's build and the SHA-256 of every output file
+
+After a build (or with --check, on an existing build) each split is checked:
   errors    a WAV / truth file / manifest row missing, not 16 kHz mono, files that
             don't match build_info.json, pieces outside their WAV or overlapping,
             a peak above PEAK_LIMIT_DBFS, empty spans, spans outside the piece
-            they came from, unknown labels  -> exit code 1
+            they came from, unknown labels, a speaker that isn't in this split in
+            splits.csv, a clip that isn't 1 s or is outside its piece, a keyword clip
+            without its whole word, or neither centred on it nor at a piece edge that's
+            a source edge, an 'other' clip overlapping a keyword / ignore span
+            -> exit code 1
   warnings  keyword spans shorter than MIN_KEYWORD_S or longer than MAX_KEYWORD_S,
             or QUIET_SPAN_DB quieter than the audio around them (misaligned?), and
-            pieces with more than HIGH_GAIN_DB of gain (boosted near-silence?), and a
-            source median speech level more than 1 dB from the target
+            pieces with more than HIGH_GAIN_DB of gain (boosted near-silence?), a
+            source median speech level more than 1 dB from the target, and keywords
+            too close to a piece edge inside the source (the piece needs more padding)
 It also prints each source's speech-level spread and how many pieces the limiter touched.
 A build also reports, per source, whether it came out identical to the previous
 build (build_info.json), and warns if it didn't with the same settings.
@@ -85,7 +103,7 @@ Usage (from HostSW/):
     python EvalScripts/make_public_eval.py --stats
     python EvalScripts/make_public_eval.py
     python EvalScripts/make_public_eval.py --check
-    python EvalScripts/make_public_eval.py --sources ls --ls-negative-min 60 --seed 1
+    python EvalScripts/make_public_eval.py --splits val --sources ls --ls-negative-min 60
 """
 
 import argparse
@@ -95,6 +113,7 @@ import json
 import math
 import pathlib
 import re
+import shutil
 import sys
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict
@@ -125,9 +144,38 @@ NOT_KEYWORD = {"CHRISTOPHER", "CHRISTOPHERS", "ARISTOPHANES", "ARISTOPHANIC"}
 SOURCES = ["ls", "ami", "swc"]
 SOURCE_NAMES = {"ls": "librispeech", "ami": "ami", "swc": "swc"}
 
-LS_NEGATIVES_PER_SPEAKER = 3
+# Speaker-group split. Every group (LibriSpeech speaker, SWC reader, AMI meetings linked by a
+# shared participant) goes to one split, so no speaker is in two. Groups are assigned greedily,
+# biggest first, each to the split that keeps every keyword's share and the share of items
+# (utterances / recordings) closest to SPLIT_FRACTIONS. Train is reserved for training and
+# not built here; val and test are built into <out>/val and <out>/test.
+SPLITS = ["val", "test"]
+SPLIT_FRACTIONS = {"train": 0.5, "val": 0.25, "test": 0.25}
+SPLITS_CSV = "splits.csv"
+
+# 1 s clips cut from each split's built WAVs (same gain / limiter), for clip-level eval later:
+# one per keyword span of at most CLIP_MAX_KEYWORD_S, centred on the word: word timings can be
+# off by a few hundred ms, and centring leaves the most room on both sides for that (a longer
+# word has too little). A window that would leave the piece is shifted back to the piece's edge,
+# but only if that edge is also the edge of the source audio: there the word can't be any further
+# out, so nothing is lost. A piece edge inside the source needs padding instead (excerpts have
+# EXCERPT_EDGE_S), so such a keyword is skipped. Also skipped if the window overlaps another
+# keyword / ignore span. Plus CLIPS_OTHER_PER_KEYWORD x as many 'other' clips: windows overlapping
+# no keyword / ignore span, with speech in them (active level within CLIP_OTHER_MIN_REL_DB of
+# their piece's)
+CLIP_S = 1.0
+CLIP_MAX_KEYWORD_S = 0.7
+SOURCE_EDGE_TOL_S = 0.002   # the manifest's source times have 3 decimals
+# Truth times have 6 decimals and file offsets aren't round, so a word exactly on a limit lands
+# either side of it depending on where it is in the WAV. Clip rules allow this much for that
+SPAN_ROUNDING_S = 1e-5
+CLIPS_OTHER_PER_KEYWORD = 2
+CLIP_OTHER_MIN_REL_DB = -15.0
+OTHER_LABEL = "other"
+
+LS_NEGATIVES_PER_SPEAKER = 12
 EXCERPT_S = 20.0         # AMI / SWC excerpt length
-EXCERPT_EDGE_S = 2.0     # keyword at least this far inside its excerpt
+EXCERPT_EDGE_S = 2.0     # keyword at least this far inside its excerpt (padding for its 1 s clip)
 # AMI recording to use (--ami-channel). Mix-Headset: speech ~43 dB above the background,
 # like LibriSpeech; the Array1-01 table-top mic only ~18 dB
 DEFAULT_AMI_CHANNEL = "Mix-Headset"
@@ -274,6 +322,13 @@ def ls_aligned_spans(align_root, utt):
     return [(start, end, label) for (start, end, w), label in zip(words, utt.labels) if label]
 
 
+def warn_if_short(source, negatives_s, negative_min):
+    """FA/hour rests on the negative audio, so a source that ran out shouldn't pass unnoticed."""
+    if negatives_s < negative_min * 60:
+        print(f"  WARNING: {SOURCE_NAMES[source]}: only {negatives_s / 60:.0f} of the "
+              f"{negative_min:g} negative minutes requested")
+
+
 def round_robin(items, key, rng):
     """Shuffles items so each group (e.g. speaker) gets its 1st pick before any gets a 2nd."""
     order = rng.permutation(len(items))
@@ -287,8 +342,8 @@ def round_robin(items, key, rng):
 
 
 def select_keyword_pieces(candidates, max_per_keyword, max_per_speaker, rng):
-    """Picks keyword pieces, rarest keyword first, round-robin over speakers.
-    A piece's keywords all count towards the caps."""
+    """Picks keyword pieces, rarest keyword first, round-robin over speakers. By default
+    (limits None) that's every piece; a piece's keywords all count towards any limits."""
     per_keyword = Counter()
     per_speaker = Counter()
     chosen = []
@@ -297,9 +352,9 @@ def select_keyword_pieces(candidates, max_per_keyword, max_per_speaker, rng):
     for kw in sorted(KEYWORDS, key=lambda k: totals[k]):
         pool = [p for p in candidates if kw in p.keywords and p.piece_id not in taken]
         for piece in round_robin(pool, lambda p: p.speakers[0], rng):
-            if per_keyword[kw] >= max_per_keyword:
+            if max_per_keyword is not None and per_keyword[kw] >= max_per_keyword:
                 break
-            if per_speaker[(piece.speakers[0], kw)] >= max_per_speaker:
+            if max_per_speaker is not None and per_speaker[(piece.speakers[0], kw)] >= max_per_speaker:
                 continue
             chosen.append(piece)
             taken.add(piece.piece_id)
@@ -309,11 +364,9 @@ def select_keyword_pieces(candidates, max_per_keyword, max_per_speaker, rng):
     return chosen
 
 
-def build_librispeech(data_dir, args, rng):
+def build_librispeech(utts, data_dir, args, rng):
     ls_root = data_dir / "LibriSpeech"
     align_root = data_dir / "librispeech_alignments"
-    splits = ls_read_transcripts(ls_root)
-    utts = [u for split in splits.values() for u in split]
 
     candidates = []
     unaligned = 0
@@ -347,6 +400,7 @@ def build_librispeech(data_dir, args, rng):
         pieces.append(Piece("ls", utt.utt_id, [utt.speaker], utt.split, flac, 0.0, duration))
         per_speaker[utt.speaker] += 1
         negatives_s += duration
+    warn_if_short("ls", negatives_s, args.ls_negative_min)
     return pieces
 
 
@@ -457,7 +511,8 @@ def build_excerpts(source, recordings, negative_min, args, rng):
     taken = {rec.rec_id: [tuple(r) for r in keyword_ranges[rec.rec_id]] for rec in recordings}
     negatives_s = 0.0
     tries = 0
-    while groups and negatives_s < negative_min * 60 and tries < 50 * len(recordings):
+    max_tries = 50 * max(len(recordings), math.ceil(negative_min * 60 / EXCERPT_S))
+    while groups and negatives_s < negative_min * 60 and tries < max_tries:
         for group in [groups[i] for i in rng.permutation(len(groups))]:
             tries += 1
             recs = by_group[group]
@@ -477,6 +532,7 @@ def build_excerpts(source, recordings, negative_min, args, rng):
             negatives_s += EXCERPT_S
             if negatives_s >= negative_min * 60:
                 break
+    warn_if_short(source, negatives_s, negative_min)
     return pieces
 
 
@@ -543,11 +599,42 @@ def ami_recordings(ami_root, channel):
     return recordings
 
 
-def build_ami(data_dir, args, rng):
-    recordings = ami_recordings(data_dir / "ami", args.ami_channel)
-    if not recordings:
-        print(f"  AMI: no meetings with {args.ami_channel} audio found, skipping (run download_ami.py)")
-        return []
+def ami_speaker_groups(manual_root):
+    """{meeting: group}: meetings that share any participant are in one group (connected
+    components), so no person can end up in two splits. The same four people are in every
+    meeting of a series (ES2002a-d), and 30 participants are in more than one series (the
+    Idiap IS / IN meetings link 25 series). A group is named after its first series."""
+    root = ET.parse(manual_root / "corpusResources" / "meetings.xml").getroot()
+    people = defaultdict(set)
+    for meeting in root.iter("meeting"):
+        people[meeting.get("observation")] |= {spk.get("global_name") for spk in meeting.iter("speaker")}
+    parent = {m: m for m in people}
+
+    def find(m):
+        while parent[m] != m:
+            parent[m] = parent[parent[m]]
+            m = parent[m]
+        return m
+
+    by_person = defaultdict(list)
+    for meeting in sorted(people):
+        for person in people[meeting]:
+            by_person[person].append(meeting)
+    for meetings in by_person.values():
+        for meeting in meetings[1:]:
+            parent[find(meeting)] = find(meetings[0])
+    components = defaultdict(list)
+    for meeting in sorted(people):
+        components[find(meeting)].append(meeting)
+    return {m: ami_series(min(ms)) for ms in components.values() for m in ms}
+
+
+def ami_series(meeting):
+    """ES2002a -> ES2002 (the meetings of a series have the same participants)."""
+    return meeting[:-1] if meeting[-1].isalpha() else meeting
+
+
+def build_ami(recordings, data_dir, args, rng):
     return build_excerpts("ami", recordings, args.ami_negative_min, args, rng)
 
 
@@ -650,12 +737,142 @@ def swc_recordings(swc_root):
     return recordings
 
 
-def build_swc(data_dir, args, rng):
-    swc_root = data_dir / "swc" / "english"
-    if not swc_root.is_dir():
-        print(f"  SWC: {swc_root} not found, skipping")
-        return []
-    return build_excerpts("swc", swc_recordings(swc_root), args.swc_negative_min, args, rng)
+def build_swc(recordings, data_dir, args, rng):
+    return build_excerpts("swc", recordings, args.swc_negative_min, args, rng)
+
+
+# --- Sources and the train / val / test split --------------------------------
+
+@dataclass
+class SourceData:
+    """A loaded source: its items (LsUtterance or Recording), the split group of each item,
+    and the members of each group (what a training loader holds out / selects)."""
+    source: str
+    items: list
+    group: dict              # id(item) -> group
+    members: dict            # group -> sorted list of member ids (speaker / reader / meeting)
+
+    def keywords(self, item):
+        if isinstance(item, LsUtterance):
+            return [l for l in item.labels if l in KEYWORDS]
+        return [w.label for w in item.words if w.label in KEYWORDS]
+
+
+def load_source(source, data_dir, args):
+    """Loads a source's utterances / recordings, or None if its data isn't there."""
+    if source == "ls":
+        ls_root = data_dir / "LibriSpeech"
+        if not ls_root.is_dir():
+            print(f"  LibriSpeech: {ls_root} not found, skipping")
+            return None
+        utts = [u for split in ls_read_transcripts(ls_root).values() for u in split]
+        groups = {id(u): u.speaker for u in utts}
+        members = defaultdict(set)
+        for u in utts:
+            members[u.speaker].add(u.speaker)
+    elif source == "ami":
+        recordings = ami_recordings(data_dir / "ami", args.ami_channel)
+        if not recordings:
+            print(f"  AMI: no meetings with {args.ami_channel} audio found, skipping (run download_ami.py)")
+            return None
+        meeting_group = ami_speaker_groups(data_dir / "ami" / "ami_public_manual_1")
+        groups = {id(r): meeting_group[r.rec_id] for r in recordings}
+        members = defaultdict(set)
+        for meeting, group in meeting_group.items():
+            members[group].add(meeting)
+        utts = recordings
+    else:
+        swc_root = data_dir / "swc" / "english"
+        if not swc_root.is_dir():
+            print(f"  SWC: {swc_root} not found, skipping")
+            return None
+        recordings = swc_recordings(swc_root)
+        groups = {id(r): r.group_key for r in recordings}
+        members = defaultdict(set)
+        for r in recordings:
+            members[r.group_key].add(r.group_key)
+        utts = recordings
+    return SourceData(source, utts, groups, {g: sorted(m) for g, m in members.items()})
+
+
+def assign_splits(data, seed):
+    """{group: 'train' | 'val' | 'test'} for one source. Greedy: groups in order of size
+    (keyword count, then item count; ties in seeded random order), each to the split that
+    minimises the squared distance of every keyword's and the items' split shares from
+    SPLIT_FRACTIONS. Big groups go first so the many small ones can even out the rest."""
+    group_keywords = defaultdict(list)
+    group_items = Counter()
+    for item in data.items:
+        group = data.group[id(item)]
+        group_keywords[group] += data.keywords(item)
+        group_items[group] += 1
+    dims = KEYWORDS + ["items"]
+    sizes = {g: Counter(group_keywords[g]) + Counter({"items": group_items[g]}) for g in group_items}
+    totals = {d: max(1, sum(c[d] for c in sizes.values())) for d in dims}
+
+    rng = np.random.default_rng(seed)
+    groups = sorted(group_items)
+    groups = [groups[i] for i in rng.permutation(len(groups))]
+    groups.sort(key=lambda g: (-sum(sizes[g][k] for k in KEYWORDS), -group_items[g]))   # stable: ties stay random
+
+    filled = {split: Counter() for split in SPLIT_FRACTIONS}
+    split_of = {}
+
+    def cost(split, size):
+        total = 0.0
+        for d in dims:
+            for sp, frac in SPLIT_FRACTIONS.items():
+                share = (filled[sp][d] + (size[d] if sp == split else 0)) / totals[d]
+                total += (share - frac) ** 2
+        return total
+
+    for group in groups:
+        best = min(SPLIT_FRACTIONS, key=lambda sp: cost(sp, sizes[group]))
+        filled[best] += sizes[group]
+        split_of[group] = best
+    return split_of, group_keywords
+
+
+def write_splits(out_dir, assignments):
+    """Writes splits.csv: one row per group, keeping rows of sources not reassigned this time.
+    It's what the training step reads: only 'train' groups may be trained on."""
+    path = out_dir / SPLITS_CSV
+    rows = []
+    if path.exists():
+        with open(path, newline="") as f:
+            rows = [r for r in csv.DictReader(f) if r["source"] not in {SOURCE_NAMES[s] for s in assignments}]
+    for source, (data, split_of, group_keywords) in assignments.items():
+        items_per_group = Counter(data.group[id(i)] for i in data.items)
+        for group in sorted(split_of):
+            counts = Counter(group_keywords[group])
+            rows.append({"source": SOURCE_NAMES[source], "group": group, "split": split_of[group],
+                         "members": " ".join(data.members.get(group, [group])),
+                         "items": items_per_group[group],
+                         **{f"n_{kw}": counts[kw] for kw in KEYWORDS}})
+    rows.sort(key=lambda r: (SOURCES.index(next(k for k, v in SOURCE_NAMES.items() if v == r["source"])), r["group"]))
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"Wrote {path}:")
+    for source in assignments:
+        name = SOURCE_NAMES[source]
+        src_rows = [r for r in rows if r["source"] == name]
+        for split in ["train", "val", "test"]:
+            r = [x for x in src_rows if x["split"] == split]
+            kw = {k: sum(int(x[f"n_{k}"]) for x in r) for k in KEYWORDS}
+            total = {k: sum(int(x[f"n_{k}"]) for x in src_rows) or 1 for k in KEYWORDS}
+            print(f"  {name:12s} {split:5s} {len(r):5d} groups  " + "  ".join(
+                f"{k} {kw[k]:4d} ({100 * kw[k] / total[k]:3.0f}%)" for k in KEYWORDS))
+
+
+def read_splits(out_dir):
+    """{(source name, member): split} from splits.csv, or None if there isn't one."""
+    path = out_dir / SPLITS_CSV
+    if not path.exists():
+        return None
+    with open(path, newline="") as f:
+        return {(r["source"], m): r["split"] for r in csv.DictReader(f) for m in r["members"].split()}
 
 
 # --- Assembly ----------------------------------------------------------------
@@ -766,6 +983,7 @@ def assemble(source, pieces, out_dir, args, rng):
                 "keywords": " ".join(piece.keywords),
                 "src_file": str(piece.audio_path.relative_to(args.data_dir)),
                 "src_start_s": f"{piece.start_s:.3f}", "src_end_s": f"{piece.end_s:.3f}",
+                "src_duration_s": f"{sf.info(str(piece.audio_path)).duration:.3f}",
                 "gain_db": f"{gain_db:.2f}", "limit_db": f"{limit_db:.2f}",
             })
             g = gap()
@@ -781,6 +999,156 @@ def assemble(source, pieces, out_dir, args, rng):
                 # 6 dp so times are sample-exact (1 sample = 62.5 us at 16 kHz)
                 writer.writerow([f"{start_s:.6f}", f"{end_s:.6f}", label, piece_id])
     return manifest, len(files)
+
+
+def read_split_build(out_dir):
+    """(manifest rows grouped by WAV, truth spans per WAV) of a built split."""
+    with open(out_dir / "manifest.csv", newline="") as f:
+        manifest = list(csv.DictReader(f))
+    by_wav = defaultdict(list)
+    for r in manifest:
+        by_wav[r["wav"]].append(r)
+    spans = {}
+    for wav in by_wav:
+        with open(out_dir / wav.replace(".wav", "_truth.csv"), newline="") as f:
+            spans[wav] = [(float(r["start_s"]), float(r["end_s"]), r["label"], r["file"]) for r in csv.DictReader(f)]
+    return by_wav, spans
+
+
+def at_source_start(piece):
+    """True if a manifest row's piece starts where its source audio starts."""
+    return float(piece["src_start_s"]) <= SOURCE_EDGE_TOL_S
+
+
+def at_source_end(piece):
+    """True if a manifest row's piece ends where its source audio ends."""
+    return float(piece["src_end_s"]) >= float(piece["src_duration_s"]) - SOURCE_EDGE_TOL_S
+
+
+def place_keyword_clip(start_s, end_s, piece):
+    """Start of the 1 s clip for a keyword span, in the piece's WAV: centred on the word, or
+    shifted back to the piece's edge if that's also the source's edge. Returns (start_s, None),
+    or (None, the reason there's no clip)."""
+    piece_start, piece_end = float(piece["start_s"]), float(piece["end_s"])
+    start = (start_s + end_s - CLIP_S) / 2
+    if start < piece_start:
+        if not at_source_start(piece):
+            return None, "too close to a piece start inside the source (needs padding)"
+        start = piece_start
+    elif start + CLIP_S > piece_end:
+        if not at_source_end(piece):
+            return None, "too close to a piece end inside the source (needs padding)"
+        start = piece_end - CLIP_S
+    if start < piece_start or start + CLIP_S > piece_end:
+        return None, "piece shorter than a clip"
+    return start, None
+
+
+def clip_length_ok(start_s, end_s):
+    """True if a keyword span is short enough to get a clip."""
+    return end_s - start_s <= CLIP_MAX_KEYWORD_S + SPAN_ROUNDING_S
+
+
+def overlaps_any(spans, start_s, end_s, skip=None):
+    return any(s < end_s and start_s < e for s, e, label, pid in spans if (s, e, label, pid) != skip)
+
+
+def write_clips(out_dir, rng):
+    """Cuts 1 s clips from a split's built WAVs into <out_dir>/clips/<label>/ and writes
+    clips.csv: keyword clips (see place_keyword_clip) and CLIPS_OTHER_PER_KEYWORD x
+    as many 'other' clips (speech overlapping no keyword / ignore span). Rebuilt from scratch
+    from the WAVs on disk, so it always matches them."""
+    clips_dir = out_dir / "clips"
+    if clips_dir.exists():
+        shutil.rmtree(clips_dir)
+    by_wav, spans = read_split_build(out_dir)
+    n = round(CLIP_S * SAMPLE_RATE_HZ)
+    rows = []
+    skipped = Counter()
+
+    def save(pcm, wav, start, label, piece, span=None):
+        i = round(start * SAMPLE_RATE_HZ)
+        name = f"{wav[:-4]}_{i:08d}.wav"
+        (clips_dir / label).mkdir(parents=True, exist_ok=True)
+        sf.write(str(clips_dir / label / name), pcm[i:i + n], SAMPLE_RATE_HZ, subtype="PCM_16")
+        rows.append({"file": f"clips/{label}/{name}", "label": label, "wav": wav,
+                     "start_s": f"{i / SAMPLE_RATE_HZ:.6f}", "end_s": f"{(i + n) / SAMPLE_RATE_HZ:.6f}",
+                     "piece_id": piece["piece_id"], "source": piece["source"],
+                     "span_start_s": f"{span[0]:.6f}" if span else "", "span_end_s": f"{span[1]:.6f}" if span else ""})
+
+    # Keyword clips first: their count sets how many 'other' clips each WAV gets
+    keyword_clips = Counter()
+    shifted = 0
+    for wav in sorted(by_wav):
+        pcm, _ = sf.read(str(out_dir / wav), dtype="int16")
+        pieces = {p["piece_id"]: p for p in by_wav[wav]}
+        for span in spans[wav]:
+            start_s, end_s, label, pid = span
+            if label not in KEYWORDS:
+                continue
+            if not clip_length_ok(start_s, end_s):
+                skipped[f"keyword longer than {CLIP_MAX_KEYWORD_S} s"] += 1
+                continue
+            piece = pieces[pid]
+            start, problem = place_keyword_clip(start_s, end_s, piece)
+            if problem:
+                skipped[problem] += 1
+                continue
+            if overlaps_any(spans[wav], start + SPAN_ROUNDING_S, start + CLIP_S - SPAN_ROUNDING_S, skip=span):
+                skipped["another keyword / ignore span in the window"] += 1
+                continue
+            save(pcm, wav, start, label, piece, span)
+            keyword_clips[wav] += 1
+            shifted += abs(start - (start_s + end_s - CLIP_S) / 2) > 1 / SAMPLE_RATE_HZ
+
+    # 'other' clips: spread over the WAVs in proportion to their keyword clips, round-robin
+    # over each WAV's pieces
+    for wav in sorted(by_wav):
+        need = CLIPS_OTHER_PER_KEYWORD * keyword_clips[wav]
+        if not need:
+            continue
+        pcm, _ = sf.read(str(out_dir / wav), dtype="int16")
+        audio = pcm.astype(np.float32) / 32768
+        pieces = [p for p in sorted(by_wav[wav], key=lambda p: float(p["start_s"]))
+                  if float(p["end_s"]) - float(p["start_s"]) > CLIP_S]
+        level = {p["piece_id"]: active_speech_db(audio[round(float(p["start_s"]) * SAMPLE_RATE_HZ):
+                                                       round(float(p["end_s"]) * SAMPLE_RATE_HZ)]) for p in pieces}
+        taken, tries = [], 0
+        while len(taken) < need and pieces and tries < 50 * need:
+            for piece in [pieces[i] for i in rng.permutation(len(pieces))]:
+                tries += 1
+                start = rng.uniform(float(piece["start_s"]), float(piece["end_s"]) - CLIP_S)
+                end = start + CLIP_S
+                if overlaps_any(spans[wav], start, end) or any(a < end and start < b for a, b in taken):
+                    continue
+                window = audio[round(start * SAMPLE_RATE_HZ):round(start * SAMPLE_RATE_HZ) + n]
+                if active_speech_db(window) < level[piece["piece_id"]] + CLIP_OTHER_MIN_REL_DB:
+                    continue   # mostly pause, not speech
+                taken.append((start, end))
+                save(pcm, wav, start, OTHER_LABEL, piece)
+                if len(taken) >= need:
+                    break
+        if len(taken) < need:
+            skipped["'other' clips short (not enough free speech)"] += need - len(taken)
+
+    rows.sort(key=lambda r: r["file"])
+    with open(out_dir / "clips.csv", "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer.writeheader()
+        writer.writerows(rows)
+    counts = Counter(r["label"] for r in rows)
+    print(f"Wrote {len(rows)} clips to {clips_dir}: " + ", ".join(f"{k} {counts[k]}" for k in KEYWORDS + [OTHER_LABEL])
+          + f" ({shifted} keyword clips shifted to a source edge)"
+          + ("; skipped " + ", ".join(f"{v} {k}" for k, v in skipped.items()) if skipped else ""))
+
+
+def clips_digest(out_dir):
+    """One SHA-256 over every clip file (path + content), for build_info.json."""
+    h = hashlib.sha256()
+    for path in sorted((out_dir / "clips").rglob("*.wav")):
+        h.update(str(path.relative_to(out_dir)).encode())
+        h.update(file_sha256(path).encode())
+    return h.hexdigest()
 
 
 def summarise(source, pieces, n_files):
@@ -806,7 +1174,7 @@ def print_counts(name, hours, speakers, kw_counts, kw_speakers, ignores):
           + f"  ignore {ignores:4d}")
 
 
-def stats(data_dir, ami_channel):
+def stats(data_dir, ami_channel, out_dir):
     ls_root = data_dir / "LibriSpeech"
     if ls_root.is_dir():
         print("LibriSpeech (transcripts; hours from SPEAKERS.TXT / file count, approximate):")
@@ -866,13 +1234,25 @@ def stats(data_dir, ami_channel):
     else:
         print(f"SWC: not found ({swc_root})")
 
+    path = out_dir / SPLITS_CSV
+    if path.exists():
+        with open(path, newline="") as f:
+            rows = list(csv.DictReader(f))
+        print(f"Split ({path}): groups and keyword occurrences per split")
+        for name in [SOURCE_NAMES[s] for s in SOURCES]:
+            for split in ["train", "val", "test"]:
+                r = [x for x in rows if x["source"] == name and x["split"] == split]
+                if r:
+                    print(f"  {name:12s} {split:5s} {len(r):5d} groups  "
+                          + "  ".join(f"{k} {sum(int(x[f'n_{k}']) for x in r):5d}" for k in KEYWORDS))
+
 
 # --- Checks ------------------------------------------------------------------
 
 BUILD_INFO_NAME = "build_info.json"
 MAX_KEYWORD_S = 2.0       # a longer keyword span is probably misaligned too
 QUIET_SPAN_DB = -10.0     # keyword span this much quieter than its surroundings: misaligned?
-QUIET_CONTEXT_S = 1.5     # surroundings = this much audio either side of the span
+QUIET_CONTEXT_S = 1.5     # surroundings = this much audio either side of the span, within its piece
 # More gain than this: probably near-silence boosted to speech level. The quietest AMI
 # meetings (TS3004a/b, speech peaks ~-45 dBFS) legitimately need ~32 dB
 HIGH_GAIN_DB = 35.0
@@ -883,9 +1263,20 @@ BUILD_SETTINGS = ["max_per_keyword", "max_per_speaker", "ls_negative_min", "ami_
 
 
 def output_files(out_dir):
-    """Every file a build writes, apart from build_info.json itself."""
+    """Every file a build writes, apart from build_info.json itself and the clip WAVs
+    (those are covered by one combined hash, CLIPS_KEY)."""
     files = sorted(p for p in out_dir.iterdir() if OUTPUT_NAME.match(p.name))
-    return files + [p for p in (out_dir / "manifest.csv", out_dir / "speakers.txt") if p.exists()]
+    return files + [p for p in (out_dir / "manifest.csv", out_dir / "clips.csv") if p.exists()]
+
+
+CLIPS_KEY = "clips/*.wav"
+
+
+def output_hashes(out_dir):
+    files = {p.name: file_sha256(p) for p in output_files(out_dir)}
+    if (out_dir / "clips").is_dir():
+        files[CLIPS_KEY] = clips_digest(out_dir)
+    return files
 
 
 def file_sha256(path):
@@ -905,7 +1296,7 @@ def update_build_info(out_dir, args, built):
     """Records the settings of the sources just built and the hash of every output file,
     and reports whether the rebuilt sources came out the same as the previous build."""
     old = read_build_info(out_dir)
-    files = {p.name: file_sha256(p) for p in output_files(out_dir)}
+    files = output_hashes(out_dir)
     settings = {k: getattr(args, k) for k in BUILD_SETTINGS}
     script = file_sha256(pathlib.Path(__file__))
 
@@ -931,6 +1322,9 @@ def update_build_info(out_dir, args, built):
         else:
             print("    WARNING: same settings and script as before, so either the datasets changed "
                   "or the build isn't reproducible")
+
+    clips_same = old["files"].get(CLIPS_KEY) == files.get(CLIPS_KEY)
+    print(f"  clips: {'identical' if clips_same else 'changed' if CLIPS_KEY in old['files'] else 'no previous build'}")
 
     sources = dict(old["sources"])
     for source in built:
@@ -980,9 +1374,9 @@ def check_build(out_dir):
     recorded = read_build_info(out_dir)["files"]
     if not recorded:
         report.add("error", "no build_info.json", f"rebuild to create {BUILD_INFO_NAME}")
-    for path in output_files(out_dir):
-        if recorded and recorded.get(path.name) != file_sha256(path):
-            report.add("error", "file doesn't match build_info.json", path.name)
+    for name, digest in output_hashes(out_dir).items():
+        if recorded and recorded.get(name) != digest:
+            report.add("error", "file doesn't match build_info.json", name)
 
     pieces_by_wav = defaultdict(list)
     for r in manifest:
@@ -1043,16 +1437,83 @@ def check_build(out_dir):
                 report.add("error", "unknown label", where)
                 continue
             per_source[source][label] += 1
+            # A keyword near a piece edge needs that edge to be the source's, or padding
+            piece = next((p for p in pieces if p["piece_id"] == span["file"]), None)
+            centred_start = (start + end - CLIP_S) / 2
+            if piece and clip_length_ok(start, end) and (
+                    (centred_start < float(piece["start_s"]) and not at_source_start(piece))
+                    or (centred_start + CLIP_S > float(piece["end_s"]) and not at_source_end(piece))):
+                report.add("warning", "keyword too close to a piece edge inside the source (needs padding)", where)
             # Plausible keyword length, and audible: a misaligned span can land on a pause
             if not MIN_KEYWORD_S <= end - start <= MAX_KEYWORD_S:
                 report.add("warning", f"keyword span not {MIN_KEYWORD_S}-{MAX_KEYWORD_S} s long",
                            f"{where}: {end - start:.2f}s")
             span_db = rms_db(audio[round(start * rate):round(end * rate)])
-            context = audio[max(0, round((start - QUIET_CONTEXT_S) * rate)):round((end + QUIET_CONTEXT_S) * rate)]
+            context_start, context_end = start - QUIET_CONTEXT_S, end + QUIET_CONTEXT_S
+            if piece:  # its own piece only: the next piece is another speaker at another level
+                context_start = max(context_start, float(piece["start_s"]))
+                context_end = min(context_end, float(piece["end_s"]))
+            context = audio[max(0, round(context_start * rate)):round(context_end * rate)]
             relative_db = span_db - rms_db(context)
             if relative_db < QUIET_SPAN_DB:
                 report.add("warning", f"keyword span >{-QUIET_SPAN_DB:g} dB quieter than the "
                            f"{QUIET_CONTEXT_S:g} s around it", f"{where}: {relative_db:+.1f} dB")
+
+    # Split membership: every speaker / meeting must belong to this split in splits.csv
+    split_of = read_splits(out_dir.parent)
+    if out_dir.name in SPLITS and split_of is not None:
+        for r in manifest:
+            members = [r["group"]] if r["source"] == "ami" else [m for m in r["speakers"].split() if m != "?"]
+            for member in members:
+                got = split_of.get((r["source"], member))
+                if got != out_dir.name:
+                    report.add("error", f"speaker not in the {out_dir.name} split of {SPLITS_CSV}",
+                               f"{r['wav']} {r['piece_id']}: {r['source']} {member} is in '{got}'")
+    elif out_dir.name in SPLITS:
+        report.add("error", f"no {SPLITS_CSV}", f"{out_dir.parent / SPLITS_CSV} is missing")
+
+    # Clips: 1 s and inside their piece; keyword clips contain their word and are centred on it
+    # or shifted to a piece edge that's also a source edge; 'other' clips avoid keyword / ignore spans
+    clip_counts = Counter()
+    clip_shifted = 0
+    if (out_dir / "clips.csv").exists():
+        pieces_by_id = {(r["wav"], r["piece_id"]): r for r in manifest}
+        tol = 2 / SAMPLE_RATE_HZ
+        spans_by_wav = {}
+        with open(out_dir / "clips.csv", newline="") as f:
+            for c in csv.DictReader(f):
+                clip_counts[c["label"]] += 1
+                path = out_dir / c["file"]
+                if not path.exists():
+                    report.add("error", "clip missing", c["file"])
+                    continue
+                info = sf.info(str(path))
+                if info.frames != round(CLIP_S * SAMPLE_RATE_HZ) or info.samplerate != SAMPLE_RATE_HZ or info.channels != 1:
+                    report.add("error", "clip not 1 s of 16 kHz mono", f"{c['file']}: {info.frames} frames")
+                if c["wav"] not in spans_by_wav:
+                    with open(out_dir / c["wav"].replace(".wav", "_truth.csv"), newline="") as tf:
+                        spans_by_wav[c["wav"]] = [(float(t["start_s"]), float(t["end_s"]), t["label"], t["file"])
+                                                  for t in csv.DictReader(tf)]
+                start, end = float(c["start_s"]), float(c["end_s"])
+                piece = pieces_by_id.get((c["wav"], c["piece_id"]))
+                if piece is None:
+                    report.add("error", "clip's piece isn't in the manifest", c["file"])
+                    continue
+                piece_start, piece_end = float(piece["start_s"]), float(piece["end_s"])
+                if start < piece_start - tol or end > piece_end + tol:
+                    report.add("error", "clip outside its piece", c["file"])
+                if c["label"] in KEYWORDS:
+                    span_start, span_end = float(c["span_start_s"]), float(c["span_end_s"])
+                    if not (start <= span_start and span_end <= end):
+                        report.add("error", "keyword clip doesn't contain its word", c["file"])
+                    if abs((start + end) - (span_start + span_end)) / 2 > tol:
+                        clip_shifted += 1
+                        if not ((abs(start - piece_start) <= tol and at_source_start(piece))
+                                or (abs(end - piece_end) <= tol and at_source_end(piece))):
+                            report.add("error", "keyword clip neither centred nor at a piece edge "
+                                       "that's a source edge", c["file"])
+                elif overlaps_any(spans_by_wav[c["wav"]], start, end):
+                    report.add("error", "'other' clip overlaps a keyword / ignore span", c["file"])
 
     # Gain: large values mean a quiet source; very large ones near-silence boosted to speech level
     gains, limits = defaultdict(list), defaultdict(list)
@@ -1082,6 +1543,9 @@ def check_build(out_dir):
         lim = np.array(limits[source])
         print(f"  {SOURCE_NAMES.get(source, source):<12} {p5:7.1f} / {p50:6.1f} / {p95:6.1f}  ({p95 - p5:4.1f} dB)"
               f"{'':9s}{int(np.sum(lim > 0)):4d} of {len(lim)}, {lim.max() if lim.size else 0:.1f} dB")
+    if clip_counts:
+        print("  clips: " + ", ".join(f"{k} {clip_counts[k]}" for k in KEYWORDS + [OTHER_LABEL])
+              + f" ({clip_shifted} keyword clips shifted to a source edge)")
     report.print()
     errors, warnings = report.count("error"), report.count("warning")
     print(f"  {errors} errors, {warnings} warnings" + ("" if errors else " (OK)"))
@@ -1103,19 +1567,21 @@ def parse_args():
                         help="only check the existing build in --out (a build always checks itself too)")
     parser.add_argument("--sources", nargs="+", choices=SOURCES, default=SOURCES,
                         help="sources to build (default: ls ami swc)")
-    parser.add_argument("--max-per-keyword", type=int, default=150,
-                        help="keyword occurrences per keyword per source (default: 150)")
-    parser.add_argument("--max-per-speaker", type=int, default=2,
-                        help="occurrences of one keyword per speaker (default: 2)")
-    parser.add_argument("--ls-negative-min", type=float, default=120,
-                        help="minutes of LibriSpeech utterances without keywords (default: 120)")
+    parser.add_argument("--splits", nargs="+", choices=SPLITS, default=SPLITS,
+                        help="splits to build / check (default: val test)")
+    parser.add_argument("--max-per-keyword", type=int,
+                        help="limit on occurrences of a keyword per source and split (default: no limit)")
+    parser.add_argument("--max-per-speaker", type=int,
+                        help="limit on occurrences of a keyword per speaker (default: no limit)")
+    parser.add_argument("--ls-negative-min", type=float, default=1500,
+                        help="minutes of LibriSpeech utterances without keywords (default: 1500)")
     parser.add_argument("--ami-channel", default=DEFAULT_AMI_CHANNEL,
                         help=f"AMI recording to use, e.g. Mix-Headset, Mix-Lapel, Array1-01 "
                              f"(default: {DEFAULT_AMI_CHANNEL})")
-    parser.add_argument("--ami-negative-min", type=float, default=60,
-                        help="minutes of AMI excerpts without keywords (default: 60)")
-    parser.add_argument("--swc-negative-min", type=float, default=60,
-                        help="minutes of SWC excerpts without keywords (default: 60)")
+    parser.add_argument("--ami-negative-min", type=float, default=600,
+                        help="minutes of AMI excerpts without keywords (default: 600)")
+    parser.add_argument("--swc-negative-min", type=float, default=900,
+                        help="minutes of SWC excerpts without keywords (default: 900)")
     parser.add_argument("--level-dbfs", type=float, default=DEFAULT_LEVEL_DBFS,
                         help=f"median active-speech level of each source (default: {DEFAULT_LEVEL_DBFS:g}, "
                              f"the board recordings' level)")
@@ -1127,42 +1593,64 @@ def main():
     args = parse_args()
     args.data_dir = args.data_dir.resolve()
     if args.stats:
-        stats(args.data_dir, args.ami_channel)
+        stats(args.data_dir, args.ami_channel, args.out)
         return
     if args.check:
-        sys.exit(1 if check_build(args.out) else 0)
+        dirs = [args.out / split for split in args.splits if (args.out / split).is_dir()]
+        if not dirs:
+            sys.exit(f"no built splits in {args.out}")
+        sys.exit(1 if sum(check_build(d) for d in dirs) else 0)
 
     args.out.mkdir(parents=True, exist_ok=True)
-    builders = {"ls": build_librispeech, "ami": build_ami, "swc": build_swc}
-    manifest = []
-    built = set()
+    data, assignments = {}, {}
     for source in args.sources:
-        print(f"Selecting {SOURCE_NAMES[source]}...")
-        # One generator per source, so building some sources gives the same picks as building all
-        rng = np.random.default_rng([args.seed, SOURCES.index(source)])
-        pieces = builders[source](args.data_dir, args, rng)
-        if not pieces:
+        print(f"Loading {SOURCE_NAMES[source]}...")
+        loaded = load_source(source, args.data_dir, args)
+        if loaded is None:
             continue
-        # Remove this source's files from an earlier build, so none are left over
-        for old in args.out.iterdir():
-            if OUTPUT_NAME.match(old.name) and old.name.startswith(f"{source}_"):
-                old.unlink()
-        rows, n_files = assemble(source, pieces, args.out, args, rng)
-        manifest += rows
-        built.add(SOURCE_NAMES[source])
-        summarise(source, pieces, n_files)
+        split_of, group_keywords = assign_splits(loaded, args.seed)
+        data[source] = (loaded, split_of)
+        assignments[source] = (loaded, split_of, group_keywords)
+    if not data:
+        sys.exit("no source data found")
+    write_splits(args.out, assignments)
 
-    if not manifest:
-        sys.exit("nothing built")
-    write_manifest(args.out, manifest, built)
-    update_build_info(args.out, args, [s for s in args.sources if SOURCE_NAMES[s] in built])
-    if check_build(args.out):
-        sys.exit(1)
+    builders = {"ls": build_librispeech, "ami": build_ami, "swc": build_swc}
+    errors = 0
+    for split in args.splits:
+        out_dir = args.out / split
+        out_dir.mkdir(exist_ok=True)
+        manifest, built = [], []
+        for source, (loaded, split_of) in data.items():
+            items = [i for i in loaded.items if split_of[loaded.group[id(i)]] == split]
+            groups = {loaded.group[id(i)] for i in items}
+            print(f"\n[{split}] Selecting {SOURCE_NAMES[source]} from {len(items)} "
+                  f"{'utterances' if source == 'ls' else 'recordings'} of {len(groups)} groups...")
+            # One generator per source and split, so building some gives the same picks as building all
+            rng = np.random.default_rng([args.seed, SOURCES.index(source), SPLITS.index(split)])
+            pieces = builders[source](items, args.data_dir, args, rng)
+            if not pieces:
+                continue
+            # Remove this source's files from an earlier build, so none are left over
+            for old in out_dir.iterdir():
+                if OUTPUT_NAME.match(old.name) and old.name.startswith(f"{source}_"):
+                    old.unlink()
+            rows, n_files = assemble(source, pieces, out_dir, args, rng)
+            manifest += rows
+            built.append(source)
+            summarise(source, pieces, n_files)
+        if not manifest:
+            print(f"[{split}] nothing built")
+            continue
+        write_manifest(out_dir, manifest, {SOURCE_NAMES[s] for s in built})
+        write_clips(out_dir, np.random.default_rng([args.seed, len(SOURCES), SPLITS.index(split)]))
+        update_build_info(out_dir, args, built)
+        errors += check_build(out_dir)
+    sys.exit(1 if errors else 0)
 
 
 def write_manifest(out_dir, rows, built_sources):
-    """Writes manifest.csv (keeping an earlier build's rows for sources not rebuilt this
-    time) and speakers.txt from it."""
+    """Writes manifest.csv, keeping an earlier build's rows for sources not rebuilt this time."""
     path = out_dir / "manifest.csv"
     if path.exists():
         with open(path, newline="") as f:
@@ -1171,18 +1659,7 @@ def write_manifest(out_dir, rows, built_sources):
         writer = csv.DictWriter(f, fieldnames=list(rows[-1]))
         writer.writeheader()
         writer.writerows(rows)
-
-    speakers = set()
-    for r in rows:
-        speakers |= {f"{r['source']} {s}" for s in r["speakers"].split() if s != "?"}
-        if r["source"] == "ami":
-            # The same people are in every meeting of a series (ES2002a-d): hold out the series
-            group = r["group"]
-            speakers.add(f"ami {group[:-1] if group[-1].isalpha() else group}")
-    (out_dir / "speakers.txt").write_text(
-        "# Speakers (and AMI meeting series) in this eval set: never train on them\n"
-        + "\n".join(sorted(speakers)) + "\n")
-    print(f"\nWrote {path} ({len(rows)} pieces) and {out_dir / 'speakers.txt'} ({len(speakers)} entries)")
+    print(f"Wrote {path} ({len(rows)} pieces)")
 
 
 if __name__ == "__main__":

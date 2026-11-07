@@ -26,6 +26,10 @@ Duplicates, substitutions and false accepts all count as false accepts.
 Negative time = audio duration minus the keyword and 'ignore' spans. Truth
 labels 'other' / '_background_noise_' (make_test_wav.py) are negative audio.
 
+For a threshold sweep over many recordings, smooth() runs once per recording and fire() once per
+threshold. keyword_curve() gives each keyword's hits and false accepts over a sweep, charging a
+false accept to the keyword that fired.
+
 Usage:
     python EvalScripts/score_results.py -r eval_01_speech.csv                 # truth: eval_01_speech_truth.csv
     python EvalScripts/score_results.py -r eval_01_speech.csv --sweep
@@ -47,6 +51,9 @@ NEGATIVE_LABELS = ["other", "_background_noise_"]
 WINDOW_LEN_S = 1.0
 MAX_MIN_COUNT = 3   # RecognizeCommands' minimum_count
 SWEEP_THRESHOLDS = np.arange(0.50, 0.951, 0.05)
+# Thresholds of the detection curve (keyword_curve()). Fine steps, finer near 1, where softmax
+# outputs bunch up; an int8 softmax tops out at 255/256
+CURVE_THRESHOLDS = np.round(np.concatenate([np.arange(0.20, 0.90, 0.02), np.arange(0.90, 0.99, 0.01), [0.99, 0.995]]), 3)
 
 
 @dataclass
@@ -90,26 +97,45 @@ def load_truth(path):
     return sorted(keyword_spans), sorted(ignore_spans)
 
 
-def detect(labels, end_s, probs, avg_s, threshold, suppress_s):
-    """Smoothing + threshold + suppression over per-window softmax outputs.
-    Returns a list of Detection in time order."""
+def smooth(labels, end_s, probs, avg_s):
+    """Causal moving average of the softmax vectors. Returns (times, classes, p) of the windows
+    whose top averaged class is a keyword: all that fire() needs, at any threshold."""
     stride_s = float(np.median(np.diff(end_s))) if len(end_s) > 1 else WINDOW_LEN_S
     n_avg = max(1, round(avg_s / stride_s))
     min_count = min(MAX_MIN_COUNT, n_avg)
-    keyword_idx = {labels.index(k) for k in KEYWORDS}
+
+    n = len(probs)
+    first = min_count - 1   # the first window with enough history
+    parts = [probs[: i + 1].mean(axis=0, keepdims=True) for i in range(first, min(n_avg - 1, n))]
+    if n >= n_avg:
+        parts.append(np.lib.stride_tricks.sliding_window_view(probs, n_avg, axis=0).mean(axis=-1))
+    if not parts:
+        return np.empty(0), np.empty(0, dtype=int), np.empty(0)
+    avg = np.concatenate(parts)
+    top = np.argmax(avg, axis=1)
+    p = avg[np.arange(len(avg)), top]
+    is_keyword = np.isin(top, [labels.index(k) for k in KEYWORDS])
+    return end_s[first:][is_keyword], top[is_keyword], p[is_keyword]
+
+
+def fire(labels, smoothed, threshold, suppress_s):
+    """Threshold + suppression over smooth()'s output. Returns a list of Detection in time order."""
+    times, top, p = smoothed
+    above = p >= threshold
 
     detections = []
     last_time = -np.inf
-    for i in range(len(probs)):
-        lo = max(0, i - n_avg + 1)
-        if i - lo + 1 < min_count:
-            continue
-        avg = probs[lo : i + 1].mean(axis=0)
-        k = int(np.argmax(avg))
-        if k in keyword_idx and avg[k] >= threshold and end_s[i] - last_time >= suppress_s:
-            detections.append(Detection(float(end_s[i]), labels[k], float(avg[k])))
-            last_time = end_s[i]
+    for t, k, value in zip(times[above], top[above], p[above]):
+        if t - last_time >= suppress_s:
+            detections.append(Detection(float(t), labels[k], float(value)))
+            last_time = t
     return detections
+
+
+def detect(labels, end_s, probs, avg_s, threshold, suppress_s):
+    """Smoothing + threshold + suppression over per-window softmax outputs.
+    Returns a list of Detection in time order."""
+    return fire(labels, smooth(labels, end_s, probs, avg_s), threshold, suppress_s)
 
 
 def match(detections, keyword_spans, ignore_spans, tolerance_s):
@@ -161,6 +187,42 @@ def score(detections, keyword_spans, ignore_spans, tolerance_s, duration_s):
     recall = sum(hit) / len(keyword_spans) if keyword_spans else float("nan")
     fa_per_min = n_false / neg_min if neg_min > 0 else float("nan")
     return hit, recall, n_false, fa_per_min, neg_min
+
+
+@dataclass
+class Recording:
+    """A scored recording, ready to detect on at any threshold."""
+    labels: list
+    smoothed: tuple
+    keyword_spans: list
+    ignore_spans: list
+    duration_s: float
+
+
+def load_recording(results_path, truth_path, avg_s):
+    labels, _, end_s, probs = load_results(results_path)
+    keyword_spans, ignore_spans = load_truth(truth_path)
+    return Recording(labels, smooth(labels, end_s, probs, avg_s), keyword_spans, ignore_spans, float(end_s.max()))
+
+
+def keyword_counts(recordings, threshold, suppress_s, tolerance_s):
+    """Pooled over the recordings: {keyword: {"hits": n, "false_accepts": n}}. A false accept
+    counts against the keyword that fired, whichever kind it is (see match())."""
+    counts = {kw: {"hits": 0, "false_accepts": 0} for kw in KEYWORDS}
+    for rec in recordings:
+        detections = fire(rec.labels, rec.smoothed, threshold, suppress_s)
+        hit = match(detections, rec.keyword_spans, rec.ignore_spans, tolerance_s)
+        for span, is_hit in zip(rec.keyword_spans, hit):
+            counts[span[2]]["hits"] += is_hit
+        for d in detections:
+            if d.outcome in ("false_accept", "substitution", "duplicate"):
+                counts[d.label]["false_accepts"] += 1
+    return counts
+
+
+def keyword_curve(recordings, suppress_s, tolerance_s, thresholds=CURVE_THRESHOLDS):
+    """The detection curve: [(threshold, keyword_counts()), ...]."""
+    return [(float(thr), keyword_counts(recordings, float(thr), suppress_s, tolerance_s)) for thr in thresholds]
 
 
 def parse_args():

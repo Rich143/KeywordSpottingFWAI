@@ -3,8 +3,9 @@
 `TrainModel.ipynb` logs one MLflow run per training session (run name = `MODEL_VERSION`): the
 hyperparameters and preprocessing settings, the dataset manifest (which clip went into which split),
 per-epoch metrics, test metrics for the Keras/int8/float models, the models themselves and plots.
-Its Board Eval section runs `snapshot_eval.py` on the int8 model and adds the board
-recall / false-accept numbers to the same run, so "Run All" gives a complete run.
+Its eval section runs `snapshot_eval.py` on the int8 model and adds the board and public
+recall / false-accept numbers and the detection curves to the same run, so "Run All" gives a
+complete run.
 
 ```
 mlflow/
@@ -36,7 +37,7 @@ params/metrics.
    `gc` needs `--tracking-uri` as well, to find the runs' artifacts. It leaves each purged run's
    empty `artifacts/<run_id>/` folder behind, which git ignores.
 3. Commit `HostSW/mlflow/` in the same commit as the new `tflite_models/kws_<ver>_*` files and the
-   updated `eval_recordings/eval_history.csv`.
+   updated `eval_history.csv` files of `eval_recordings/val/` and `eval_recordings_public/val/`.
 
 `mlflow.db` is binary, so LFS keeps a full copy of it per commit (around 1 MB; the artifacts add
 about 1-2 MB per run). Git can't merge it either, so only commit runs from one branch (`main`).

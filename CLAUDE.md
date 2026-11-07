@@ -100,18 +100,28 @@ and host-tested but not yet called on target; inference is initialised but not r
 - **Model on long audio** (host, sliding window, scripts in `HostSW/EvalScripts/`): `make_test_wav.py -o t.wav` (or a board capture via
   `receive_and_play.py -o`) → `run_model_on_wav.py -m tflite_models/<model>.tflite -w t.wav` →
   `view_results.py -w t.wav`
-- **Board eval set** (`HostSW/eval_recordings/`, held out, never train on it; see its README): record with
+- **Eval splits**: both eval sets have `val/` (compare models, make decisions; scored every training run) and
+  `test/` (held back: only scored when asked for by name, `--split test` / `RUN_TEST_EVAL = True` in the notebook;
+  look rarely, never tune on it). Never suggest tuning on, or routinely reporting, test results
+- **Board eval set** (`HostSW/eval_recordings/{val,test}/`, held out, never train on it; see its README; test is
+  empty until new recordings are made): record with
   `receive_and_play.py -o`, label keywords (+ `ignore`) in Audacity → `audacity_labels_to_truth.py` →
   `run_model_on_wav.py` → `score_results.py --sweep` (keyword recall, false accepts/min) → `view_results.py`.
-  `eval_wav.py -w <wav>` runs those last three steps in one go.
-  `snapshot_eval.py -v <ver> -m <model>` scores every labelled recording (minus `eval_ignore.txt`) and
-  appends per-recording + pooled `ALL` rows to `eval_recordings/eval_history.csv`. `TrainModel.ipynb` runs it
-  for each new model (Board Eval section, via `snapshot_eval.snapshot_eval()`) and logs the `ALL` row to the
-  MLflow run. Run it as a script for other detection settings, then that section's second cell to log it
+  `eval_wav.py -w <wav>` runs those last three steps in one go
 - **Public eval set** (`HostSW/eval_recordings_public/`, see its README): LibriSpeech, AMI and Spoken Wikipedia pieces with keyword
-  spans from word alignments, same WAV + `_truth.csv` format, hundreds of speakers. Built by
-  `make_public_eval.py` from `dataset_public/`; WAVs are gitignored (rebuild, deterministic). Not yet wired into
-  `snapshot_eval.py` / the notebook. Never train on the speakers in its `speakers.txt`
+  spans from word alignments, same WAV + `_truth.csv` format, hundreds of speakers, plus 1 s keyword / `other` clips.
+  Built by `make_public_eval.py` from `dataset_public/`; WAVs are gitignored (rebuild, deterministic). Speakers are
+  split 50/25/25 train/val/test by speaker group in `splits.csv`: only `split = train` groups may ever be trained on
+- **Scoring** (`snapshot_eval.py -v <ver> -m <model> --dataset board|public --split val|test --jobs 6`): sliding-window
+  recall + false accepts/hour over a split → one summary row in `<split dir>/eval_history.csv` (board: one per run;
+  public: one per model version, with per-source columns) with `mlflow_run_id` + `run_type`. From the notebook
+  (eval section, `mlflow_run_id=run.info.run_id`) metrics like `board_val_recall` go into the training run
+  (`run_type = training`); as a script it creates a `run_type = eval` MLflow run nested under the version's training run.
+  Rows also have recall at false accept budgets (`recall_at_300fa`/`100`/`30`; `FA_BUDGETS` = FA/hour for the device, all
+  keywords together): the main model comparison. One threshold shared by all keywords, chosen per budget on val only;
+  test reuses it (score val first). Add budgets rather than replacing them: each has history columns.
+  Every snapshot also logs the split's whole history as MLflow tables (`reports/<dataset>_<split>_history/`: default
+  threshold, by source, one per budget, run settings)
 
 ## Host Software (`HostSW/`)
 - Notebooks are in `Notebooks/`, eval scripts in `EvalScripts/`. Both use paths relative to `HostSW/`:
@@ -137,11 +147,13 @@ and host-tested but not yet called on target; inference is initialised but not r
   - `make_test_wav.py`: stitches random Speech Commands clips into a WAV + `<stem>_truth.csv`
   - `view_results.py`: plays the WAV with the model output animated in sync (matplotlib, sounddevice)
   - `audacity_labels_to_truth.py`: Audacity label export ↔ `<stem>_truth.csv`
-  - `score_results.py`: smoothing + threshold + suppression (`detect()`) over a results CSV, matched
+  - `score_results.py`: smoothing + threshold + suppression (`detect()`, or `keyword_curve()` for a threshold sweep) over a results CSV, matched
     against truth → recall and false accepts/min, `<stem>_detections.csv` for the viewer
   - `eval_wav.py`: run model → score → view on one WAV
-  - `snapshot_eval.py`: scores a model on all of `eval_recordings/` → `eval_history.csv`
-  - `make_public_eval.py`: builds `eval_recordings_public/` from `dataset_public/` (`--stats` for keyword counts)
+  - `snapshot_eval.py`: scores a model on one split of the board or public eval set → that split's `eval_history.csv` + MLflow
+  - `eval_tracking.py`: MLflow store / experiment setup shared with the notebook, standalone eval runs
+  - `make_public_eval.py`: splits speakers and builds `eval_recordings_public/{val,test}/` from `dataset_public/`
+    (`--stats` for keyword counts, `--check` to verify a build)
   - `download_ami.py`: resumable AMI audio download from the AMI site's wget script (Mix-Headset only by default;
     `--channels` picks other recordings)
 - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, mlflow, numpy, pandas,
