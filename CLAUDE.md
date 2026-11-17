@@ -109,12 +109,16 @@ and host-tested but not yet called on target; inference is initialised but not r
   `run_model_on_wav.py` → `score_results.py --sweep` (keyword recall, false accepts/min) → `view_results.py`.
   `eval_wav.py -w <wav>` runs those last three steps in one go
 - **Public eval set** (`HostSW/eval_recordings_public/`, see its README): LibriSpeech, AMI and Spoken Wikipedia pieces with keyword
-  spans from word alignments, same WAV + `_truth.csv` format, hundreds of speakers, plus 1 s keyword / `other` clips.
-  Built by `make_public_eval.py` from `dataset_public/`; WAVs are gitignored (rebuild, deterministic). Speakers are
-  split 50/25/25 train/val/test by speaker group in `splits.csv`: only `split = train` groups may ever be trained on
+  spans from word alignments, same WAV + `_truth.csv` format, hundreds of speakers, plus about as many hours of speech-free
+  background noise (MUSAN instrumental music + noise, DEMAND, Sounds of Home; empty truth files, kept at their recorded
+  level), and 1 s keyword / `other` / `_background_noise_` clips. Built by `make_public_eval.py` from `dataset_public/` and
+  `dataset_noise/`; WAVs are gitignored (rebuild, deterministic). Speakers and noise groups (artist, recorder, environment,
+  home) are split 50/25/25 train/val/test in `splits.csv`: only `split = train` groups may ever be trained on. Noise groups
+  keep their split once assigned
 - **Scoring** (`snapshot_eval.py -v <ver> -m <model> --dataset board|public --split val|test --jobs 6`): sliding-window
   recall + false accepts/hour over a split → one summary row in `<split dir>/eval_history.csv` (board: one per run;
-  public: one per model version, with per-source columns) with `mlflow_run_id` + `run_type`. From the notebook
+  public: one per model version, with per-source columns and false accepts/hour on speech and on noise apart:
+  `fa_per_hour_speech` / `_noise`, also at each budget) with `mlflow_run_id` + `run_type`. From the notebook
   (eval section, `mlflow_run_id=run.info.run_id`) metrics like `board_val_recall` go into the training run
   (`run_type = training`); as a script it creates a `run_type = eval` MLflow run nested under the version's training run.
   Rows also have recall at false accept budgets (`recall_at_300fa`/`100`/`30`; `FA_BUDGETS` = FA/hour for the device, all
@@ -138,8 +142,11 @@ and host-tested but not yet called on target; inference is initialised but not r
 - Datasets: `dataset/` = Speech Commands (downloaded, gitignored; `_background_noise_split_/` is derived
   and rebuilt by the notebook). `dataset_board/` = our board-mic training recordings (Git LFS, see its
   README); its `_background_noise_/` long recordings are split into the background class. `dataset_public/` =
-  LibriSpeech, its MFA alignments, AMI and Spoken Wikipedia (gitignored), only used for the public eval set so far. Synthetic
-  coloured noise is capped at `SYNTHETIC_NOISE_SECONDS` per colour
+  LibriSpeech, its MFA alignments, AMI and Spoken Wikipedia (gitignored), only used for the public eval set so far.
+  `dataset_noise/` = background noise from MUSAN (noise + music, vocals flagged), DEMAND and Sounds of Home (gitignored,
+  `download_noise.py`; `manifest.csv` with a split `group` per file: artist / recorder / file / environment / home), and
+  where its speech is (`speech.npz`, `noise_speech.py`). Used by the public eval set; not in training yet (use only
+  `split = train` groups, speech-free audio). Synthetic coloured noise is capped at `SYNTHETIC_NOISE_SECONDS` per colour
 - `receive_and_play.py`: UART audio receiver and playback (pyserial, sounddevice, numpy)
 - `EvalScripts/`:
   - `run_model_on_wav.py`: sliding 1 s window over a WAV → C preprocessing dylib → quantise → tflite →
@@ -152,10 +159,13 @@ and host-tested but not yet called on target; inference is initialised but not r
   - `eval_wav.py`: run model → score → view on one WAV
   - `snapshot_eval.py`: scores a model on one split of the board or public eval set → that split's `eval_history.csv` + MLflow
   - `eval_tracking.py`: MLflow store / experiment setup shared with the notebook, standalone eval runs
-  - `make_public_eval.py`: splits speakers and builds `eval_recordings_public/{val,test}/` from `dataset_public/`
-    (`--stats` for keyword counts, `--check` to verify a build)
+  - `make_public_eval.py`: splits speakers / noise groups and builds `eval_recordings_public/{val,test}/` from
+    `dataset_public/` and `dataset_noise/` (`--stats` for keyword counts and usable noise hours, `--check` to verify a build)
   - `download_ami.py`: resumable AMI audio download from the AMI site's wget script (Mix-Headset only by default;
-    `--channels` picks other recordings)
+    `--channels` picks other recordings). Its downloader is shared, and can fetch a byte range (one member of a remote zip)
+  - `download_noise.py`: resumable download of the non-speech noise in `dataset_noise/` (`--dry-run` for sizes)
+  - `noise_speech.py`: finds speech in `dataset_noise/` → `speech.npz`: the datasets' own labels (Sounds of Home's PANNs
+    labels alone, MUSAN's vocals flag) and YAMNet (MUSAN; DEMAND confident speech only). Re-run after downloads
 - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, mlflow, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
 - Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).

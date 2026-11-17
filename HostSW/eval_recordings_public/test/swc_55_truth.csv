@@ -1,2 +1,5 @@
 start_s,end_s,label,file
-191.271324,191.651324,stop,Milgram_experiment_278.19
+55.017181,55.547181,stop,Compact_Cassette_1619.18
+60.807181,61.317181,ignore,Compact_Cassette_1619.18
+275.900332,276.240332,stop,Wakefield%2c_Massachusetts_1384.18
+285.180332,285.580332,ignore,Wakefield%2c_Massachusetts_1384.18

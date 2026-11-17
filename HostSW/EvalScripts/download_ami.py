@@ -79,6 +79,10 @@ class Item:
     dest: pathlib.Path
     optional: bool        # extras (manifest, licence): a failure is only a warning
     size: int | None = None
+    # Download only bytes [start, start + size) of the URL (size must be set), e.g. one member of a
+    # remote archive. The server must honour Range requests
+    start: int = 0
+    ranged: bool = False
 
     @property
     def part(self):
@@ -130,10 +134,11 @@ def select(items, channels, meetings):
     return kept + extras
 
 
-def request(url, timeout, method="GET", offset=0):
+def request(url, timeout, method="GET", offset=0, end=None):
+    """end: exclusive end of a byte range (None: to the end of the file)."""
     headers = {"User-Agent": USER_AGENT}
-    if offset:
-        headers["Range"] = f"bytes={offset}-"
+    if offset or end is not None:
+        headers["Range"] = f"bytes={offset}-" + (str(end - 1) if end is not None else "")
     return urllib.request.urlopen(urllib.request.Request(url, headers=headers, method=method), timeout=timeout)
 
 
@@ -166,7 +171,10 @@ def download_attempt(item, timeout, file_bar, total_bar):
 
     received = 0
     try:
-        with request(item.url, timeout, offset=offset) as resp:
+        end = item.start + item.size if item.ranged else None
+        with request(item.url, timeout, offset=item.start + offset, end=end) as resp:
+            if item.ranged and resp.status != 206:
+                raise RuntimeError(f"{item.url}: the server ignored the byte range (HTTP {resp.status})")
             if offset and resp.status != 206:
                 # Server ignored the Range header and sent the whole file: start over
                 total_bar.update(-offset)

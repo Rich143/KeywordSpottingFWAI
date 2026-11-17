@@ -4,7 +4,8 @@ CSV, and log the result to MLflow.
 
 Eval sets and splits (--dataset, --split):
   board   eval_recordings/<split>/         board-mic recordings, labelled in Audacity
-  public  eval_recordings_public/<split>/  LibriSpeech / AMI / SWC pieces (make_public_eval.py)
+  public  eval_recordings_public/<split>/  LibriSpeech / AMI / SWC speech, and speech-free background
+                                           noise from MUSAN / DEMAND / Sounds of Home (make_public_eval.py)
 Split 'val' is for comparing models and making decisions. Split 'test' is held back: it's only
 scored when asked for by name (--split test), so look at it rarely, e.g. once per finished
 model, and never tune on it.
@@ -33,14 +34,21 @@ together, fit in the budget. The row reports
   recall_at_<b>fa_<kw>, fa_events_at_<b>fa_<kw>
                             per keyword, at the same threshold: which keywords miss, and which
                             ones the false accepts come from
+  fa_per_hour_at_<b>fa_speech / _noise, fa_events_at_<b>fa_speech / _noise
+                            public: the same threshold's false accepts on speech and on background
+                            noise only, each over its own hours. The budget itself is on all of it
+                            together, as the device hears it
 The threshold is chosen on val only. A test split is scored at the threshold its dataset's val row
 chose for the same model, so score val first: nothing is tuned on test, and its false accept rate
 can come out above the budget. Only val has a sweep, so only val logs the curve.
 
 History CSV (<split dir>/eval_history.csv, committed): one row per snapshot, pooled over
 all recordings (total hits / total keyword spans, total false accepts / total minutes of
-negative audio), with recording = ALL. Public rows also have per-source columns
-(recall_ls, fa_per_hour_ami, ...).
+negative audio), with recording = ALL. Public rows also have
+  fa_per_hour_speech, false_accepts_speech, negative_min_speech   speech files only (ls, ami, swc)
+  fa_per_hour_noise, false_accepts_noise, negative_min_noise      noise files only (musan, demand, soh)
+  recall_ls, fa_per_hour_ami, ...                                 per source (noise: fa_per_hour and
+                                                                  negative_min only)
   board   one row per run. Re-running the same version with the same settings is
           refused unless --replace, which drops the old rows first.
   public  one row per model version: re-scoring a version replaces its row.
@@ -53,8 +61,9 @@ MLflow (eval_tracking.py), recorded in the row's mlflow_run_id and run_type colu
   run_type standalone  run as a script: a new eval run, nested under the version's
                        training run.
 Metrics are named <dataset>_<split>_<metric> (board_val_recall, public_val_fa_per_hour,
-public_val_recall_ls, public_val_recall_at_100fa, ...) in both. Artifacts in reports/: the
-per-recording results, for val the detection curve (<prefix>_curve.csv, <prefix>_curve.png), and
+public_val_fa_per_hour_noise, public_val_recall_ls, public_val_recall_at_100fa, ...) in both.
+Artifacts in reports/: the per-recording results, for val the detection curve
+(<prefix>_curve.csv, with speech / noise false accepts per threshold for public; <prefix>_curve.png), and
 the split's whole history as written, as MLflow tables (sortable and filterable in the run's
 Artifacts tab) in <prefix>_history/: one for the default threshold, one per source (public), one per
 false accept budget and one of run settings (history_tables()).
@@ -95,7 +104,11 @@ DATASET_DIRS = {
 }
 SPLITS = ["val", "test"]
 TEST_SPLIT = "test"
-PUBLIC_SOURCES = ["ls", "ami", "swc"]   # file name prefixes in eval_recordings_public/<split>
+# File name prefixes in eval_recordings_public/<split>: speech, and background noise (no keywords)
+SPEECH_SOURCES = ["ls", "ami", "swc"]
+NOISE_SOURCES = ["musan", "demand", "soh"]
+PUBLIC_SOURCES = SPEECH_SOURCES + NOISE_SOURCES
+KINDS = {"speech": SPEECH_SOURCES, "noise": NOISE_SOURCES}
 IGNORE_FILE_NAME = "eval_ignore.txt"
 HISTORY_FILE_NAME = "eval_history.csv"
 DEFAULT_STRIDE_S = 0.1
@@ -129,15 +142,25 @@ BASE_FIELDS = [
 ]
 RUN_FIELDS = ["mlflow_run_id", "run_type"]
 SOURCE_FIELDS = ["recall", "fa_per_hour", "keyword_spans", "negative_min"]
+NOISE_SOURCE_FIELDS = ["fa_per_hour", "negative_min"]   # no keywords, so no recall
+KIND_FIELDS = ["fa_per_hour", "false_accepts", "negative_min"]
 
 
-def budget_fields():
+def source_fields(src):
+    return SOURCE_FIELDS if src in SPEECH_SOURCES else NOISE_SOURCE_FIELDS
+
+
+def budget_fields(kinds=False):
+    """Recall-at-budget columns; kinds: also each budget's speech / noise false accepts (public)."""
     fields = []
     for budget in FA_BUDGETS:
         fields += [f"recall_at_{budget}fa", f"fa_per_hour_at_{budget}fa", f"threshold_at_{budget}fa",
                    f"fa_events_at_{budget}fa"]
         fields += [f"recall_at_{budget}fa_{kw}" for kw in sr.KEYWORDS]
         fields += [f"fa_events_at_{budget}fa_{kw}" for kw in sr.KEYWORDS]
+        if kinds:
+            for kind in KINDS:
+                fields += [f"fa_per_hour_at_{budget}fa_{kind}", f"fa_events_at_{budget}fa_{kind}"]
     return fields
 
 
@@ -149,8 +172,24 @@ HISTORY_TEXT_FIELDS = {"timestamp", "model_version", "model_path", "model_sha256
 def history_fields(per_source):
     fields = list(BASE_FIELDS)
     if per_source:
-        fields += [f"{f}_{src}" for src in PUBLIC_SOURCES for f in SOURCE_FIELDS]
-    return fields + budget_fields() + RUN_FIELDS
+        fields += [f"{f}_{kind}" for kind in KINDS for f in KIND_FIELDS]
+        fields += [f"{f}_{src}" for src in PUBLIC_SOURCES for f in source_fields(src)]
+    return fields + budget_fields(per_source) + RUN_FIELDS
+
+
+def kind_indices(recordings):
+    """{kind: [index into recordings]} of public recordings, by file name prefix."""
+    out = {kind: [] for kind in KINDS}
+    for i, wav in enumerate(recordings):
+        for kind, sources in KINDS.items():
+            if wav.name.split("_")[0] in sources:
+                out[kind].append(i)
+    return {kind: idx for kind, idx in out.items() if idx}
+
+
+def sum_counts(counts):
+    """keyword_counts() results added up (they're per-recording sums, so this pools them)."""
+    return {kw: {k: sum(c[kw][k] for c in counts) for k in ("hits", "false_accepts")} for kw in sr.KEYWORDS}
 
 
 class SnapshotError(RuntimeError):
@@ -344,14 +383,21 @@ def val_thresholds(dataset, snapshot, fields):
     return {b: float(row[f"threshold_at_{b}fa"]) if row[f"threshold_at_{b}fa"] else None for b in FA_BUDGETS}
 
 
-def budget_columns(recordings, chosen, all_row, suppress_s, tolerance_s):
-    """The history columns for the chosen thresholds, scored at exactly those thresholds."""
+def budget_columns(recordings, chosen, all_row, suppress_s, tolerance_s, kinds=None):
+    """The history columns for the chosen thresholds, scored at exactly those thresholds.
+    kinds ({kind: [recording index]}, public): also each kind's false accepts over its own hours."""
     hours = all_row["negative_min"] / 60
-    columns = {f: "" for f in budget_fields()}
+    columns = {f: "" for f in budget_fields(kinds is not None)}
     for budget in FA_BUDGETS:
         threshold = chosen[budget]
         if threshold is None or not hours:
             continue
+        for kind, idx in (kinds or {}).items():
+            kind_counts = sr.keyword_counts([recordings[i] for i in idx], threshold, suppress_s, tolerance_s)
+            kind_hours = all_row[f"negative_min_{kind}"] / 60
+            events = total_false_accepts(kind_counts)
+            columns[f"fa_per_hour_at_{budget}fa_{kind}"] = events / kind_hours if kind_hours else ""
+            columns[f"fa_events_at_{budget}fa_{kind}"] = events
         counts = sr.keyword_counts(recordings, threshold, suppress_s, tolerance_s)
         recall, events = mean_recall(counts, all_row), total_false_accepts(counts)
         columns[f"recall_at_{budget}fa"] = recall if recall is not None else ""
@@ -365,20 +411,26 @@ def budget_columns(recordings, chosen, all_row, suppress_s, tolerance_s):
     return columns
 
 
-def curve_rows(curve, all_row):
+def curve_rows(curve, all_row, kind_curves=None):
     """The detection curve as CSV rows, one per threshold and keyword, with the threshold's
-    false accepts for all keywords together (what the budgets are measured against)."""
+    false accepts for all keywords together (what the budgets are measured against), and with
+    kind_curves ({kind: curve}, public) those on each kind's audio over its own hours."""
     hours = all_row["negative_min"] / 60
     rows = []
-    for threshold, counts in curve:
+    for n, (threshold, counts) in enumerate(curve):
         total = total_false_accepts(counts)
+        by_kind = {}
+        for kind, kind_curve in (kind_curves or {}).items():
+            kind_hours = all_row[f"negative_min_{kind}"] / 60
+            events = total_false_accepts(kind_curve[n][1])
+            by_kind[f"total_fa_per_hour_{kind}"] = events / kind_hours if kind_hours else ""
         for kw in sr.KEYWORDS:
             spans = all_row[f"spans_{kw}"]
             if spans and hours:
                 rows.append({"threshold": threshold, "keyword": kw, "hits": counts[kw]["hits"], "spans": spans,
                              "recall": counts[kw]["hits"] / spans, "false_accepts": counts[kw]["false_accepts"],
                              "fa_per_hour": counts[kw]["false_accepts"] / hours,
-                             "total_false_accepts": total, "total_fa_per_hour": total / hours})
+                             "total_false_accepts": total, "total_fa_per_hour": total / hours, **by_kind})
     return rows
 
 
@@ -455,8 +507,11 @@ def log_to_mlflow(run_id, prefix, all_row, per_source, per_recording, settings, 
     for src, row in per_source.items():
         metrics[f"{prefix}_recall_{src}"] = row["recall"]
         metrics[f"{prefix}_fa_per_hour_{src}"] = row["fa_per_hour"]
-    for name in budget_fields():
-        if not name.startswith("fa_events") and all_row[name] != "":
+    for kind in KINDS:
+        if f"fa_per_hour_{kind}" in all_row:
+            metrics[f"{prefix}_fa_per_hour_{kind}"] = all_row[f"fa_per_hour_{kind}"]
+    for name in budget_fields(kinds=True):
+        if not name.startswith("fa_events") and all_row.get(name, "") != "":
             metrics[f"{prefix}_{name}"] = all_row[name]
     for name, value in metrics.items():
         if value == value:   # skip NaN (e.g. no keywords in a source)
@@ -496,17 +551,21 @@ def history_tables(rows, fields):
 
     tables = {}
     tables["default_threshold"] = (rows, {**first, **same(
-        "recording", "recall", *[f"recall_{kw}" for kw in sr.KEYWORDS], "fa_per_hour", "false_accepts",
-        "substitutions", "duplicates", "ignored", "hits", "keyword_spans", "negative_min", "duration_min")})
+        "recording", "recall", *[f"recall_{kw}" for kw in sr.KEYWORDS], "fa_per_hour",
+        *[f"fa_per_hour_{kind}" for kind in KINDS], "false_accepts", *[f"false_accepts_{kind}" for kind in KINDS],
+        "substitutions", "duplicates", "ignored", "hits", "keyword_spans", "negative_min",
+        *[f"negative_min_{kind}" for kind in KINDS], "duration_min")})
     if f"recall_{PUBLIC_SOURCES[0]}" in fields:
         tables["default_threshold_by_source"] = (rows, {**first, **same(
-            *[f"{f}_{src}" for src in PUBLIC_SOURCES for f in SOURCE_FIELDS])})
+            *[f"{f}_{src}" for src in PUBLIC_SOURCES for f in source_fields(src)])})
     # Only rows scored since the budgets existed: older ones would be all empty
     scored = [r for r in rows if any(r.get(f"threshold_at_{b}fa") for b in FA_BUDGETS)]
     for budget in FA_BUDGETS:
         at = f"_at_{budget}fa"
-        columns = {**first, f"recall{at}": "recall", f"fa_per_hour{at}": "fa_per_hour",
-                   f"threshold{at}": "threshold", f"fa_events{at}": "fa_events"}
+        columns = {**first, f"recall{at}": "recall", f"fa_per_hour{at}": "fa_per_hour"}
+        columns.update({f"fa_per_hour{at}_{kind}": f"fa_per_hour_{kind}" for kind in KINDS if f"fa_per_hour{at}_{kind}" in fields})
+        columns.update({f"threshold{at}": "threshold", f"fa_events{at}": "fa_events"})
+        columns.update({f"fa_events{at}_{kind}": f"fa_events_{kind}" for kind in KINDS if f"fa_events{at}_{kind}" in fields})
         columns.update({f"recall{at}_{kw}": f"recall_{kw}" for kw in sr.KEYWORDS})
         columns.update({f"fa_events{at}_{kw}": f"fa_events_{kw}" for kw in sr.KEYWORDS})
         tables[f"budget_{budget}fa"] = (scored, columns)
@@ -552,8 +611,10 @@ def print_budgets(row, split):
                 hits = round(row[f"recall_at_{budget}fa_{kw}"] * spans)
                 cells.append(f"{kw} {100 * hits / spans:.0f}% ({hits}/{spans}, {row[f'fa_events_at_{budget}fa_{kw}']} FA)")
         total = f"recall {100 * recall:3.0f}%" if recall != "" else "recall n/a"
+        kinds = "".join(f", {kind} {row[f'fa_per_hour_at_{budget}fa_{kind}']:.1f}"
+                        for kind in KINDS if row.get(f"fa_per_hour_at_{budget}fa_{kind}", "") != "")
         print(f"    {budget:4d}/hour  {total} at {threshold:g}, {row[f'fa_per_hour_at_{budget}fa']:5.1f} FA/hour "
-              f"({events}{mark} FA)  |  " + "  ".join(cells))
+              f"({events}{mark} FA{kinds})  |  " + "  ".join(cells))
     if few:
         print(f"    * fewer than {FEW_EVENTS} false accepts behind this rate: too few to rely on")
 
@@ -673,21 +734,34 @@ def snapshot_eval(version, model_path, dataset="board", split="val", stride_s=DE
 
     all_row = pool(per_recording)
     sources = {}
+    kinds = kind_indices(recordings) if per_source else None
     if per_source:
         for src in PUBLIC_SOURCES:
             rows = [r for r in per_recording if r["recording"].startswith(f"{src}_")]
             if rows:
                 sources[src] = pool(rows)
-                for f in SOURCE_FIELDS:
+                for f in source_fields(src):
                     all_row[f"{f}_{src}"] = sources[src][f]
+        for kind, idx in kinds.items():
+            pooled = pool([per_recording[i] for i in idx])
+            for f in KIND_FIELDS:
+                all_row[f"{f}_{kind}"] = pooled[f]
 
-    # Shared thresholds for the false accept budgets: chosen on val, reused on test
+    # Shared thresholds for the false accept budgets: chosen on val, reused on test. Public: a
+    # sweep per kind, added up for the whole set's
     curve = None
     if chosen is None:
-        sweep = sr.keyword_curve(loaded, suppress_s, tolerance_s)
+        if kinds:
+            kind_sweeps = {kind: sr.keyword_curve([loaded[i] for i in idx], suppress_s, tolerance_s)
+                           for kind, idx in kinds.items()}
+            rest = [rec for i, rec in enumerate(loaded) if not any(i in idx for idx in kinds.values())]
+            parts = list(kind_sweeps.values()) + ([sr.keyword_curve(rest, suppress_s, tolerance_s)] if rest else [])
+            sweep = [(points[0][0], sum_counts([p[1] for p in points])) for points in zip(*parts)]
+        else:
+            kind_sweeps, sweep = None, sr.keyword_curve(loaded, suppress_s, tolerance_s)
         chosen = choose_thresholds(sweep, all_row)
-        curve = curve_rows(sweep, all_row)
-    all_row.update(budget_columns(loaded, chosen, all_row, suppress_s, tolerance_s))
+        curve = curve_rows(sweep, all_row, kind_sweeps)
+    all_row.update(budget_columns(loaded, chosen, all_row, suppress_s, tolerance_s, kinds))
 
     # MLflow: into the training run (notebook) or a new standalone eval run
     settings = {k: snapshot[k] for k in SETTINGS}
@@ -720,9 +794,13 @@ def snapshot_eval(version, model_path, dataset="board", split="val", stride_s=DE
           + "  ".join(f"{kw} {100 * all_row[f'recall_{kw}']:.0f}%" for kw in sr.KEYWORDS))
     print(f"  false accepts {all_row['false_accepts']} in {all_row['negative_min']:.1f} min "
           f"= {all_row['fa_per_min']:.2f}/min ({all_row['fa_per_hour']:.0f}/hour)")
+    for kind in KINDS:
+        if f"fa_per_hour_{kind}" in all_row:
+            print(f"    {kind:6s} {all_row[f'fa_per_hour_{kind}']:6.1f} FA/hour ({all_row[f'false_accepts_{kind}']} "
+                  f"in {all_row[f'negative_min_{kind}']:.0f} min)")
     for src, r in sources.items():
-        print(f"    {src:4s} recall {100 * r['recall']:3.0f}% of {r['keyword_spans']:4d}, "
-              f"{r['fa_per_hour']:6.1f} FA/hour over {r['negative_min']:.0f} min")
+        recall = f"recall {100 * r['recall']:3.0f}% of {r['keyword_spans']:4d}, " if r["keyword_spans"] else " " * 22
+        print(f"    {src:6s} {recall}{r['fa_per_hour']:6.1f} FA/hour over {r['negative_min']:.0f} min")
     print_budgets(all_row, split)
     print(f"  MLflow: {run_type} run {run_id}")
     if previous:

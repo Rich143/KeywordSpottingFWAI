@@ -1,8 +1,20 @@
 """
-Build a keyword-spotting eval set from public speech datasets, in the same
-<stem>.wav + <stem>_truth.csv format as eval_recordings/, so many more
-speakers and hours of non-keyword speech can be scored than the board
-recordings give.
+Build a keyword-spotting eval set from public speech datasets, plus speech-free background
+noise, in the same <stem>.wav + <stem>_truth.csv format as eval_recordings/, so many more
+speakers and hours of non-keyword audio can be scored than the board recordings give.
+
+Background noise (dataset_noise/, download_noise.py), about as many hours as the speech
+(--noise-min), so false accepts can be read separately on speech and on noise:
+  MUSAN           music without vocals, and assorted noise (Free Sound, Sound Bible)
+  DEMAND          environments: home, office, nature, street, transport
+  Sounds of Home  7 homes, living room and kitchen mics
+Only audio without speech is used: noise_speech.py finds it from the datasets' own labels (Sounds
+of Home's sound-event labels, MUSAN's vocals annotation) and with YAMNet (MUSAN, DEMAND). MUSAN
+files without vocals give every speech-free stretch of at least NOISE_MIN_PIECE_S, cut evenly into
+pieces of at most NOISE_MAX_PIECE_S (files with vocals, or unknown vocals, aren't used). Sounds of
+Home hours and DEMAND recordings are cut into NOISE_EXCERPT_S excerpts between their speech spans,
+spread round-robin over the files. All of a split's MUSAN pieces and DEMAND excerpts go in; Sounds
+of Home fills up to --noise-min. Noise keeps its recorded level (see Level).
 
 Keyword positions come from the datasets' word-level time alignments, so
 nothing is labelled by hand:
@@ -49,14 +61,17 @@ Pieces:
                files (no timings) or that libsndfile can't open are skipped.
 
 Each source's pieces are shuffled together and packed into ~5 minute files
-(ls_<nn>.wav, ami_<nn>.wav, swc_<nn>.wav), separated by short gaps of very quiet
-noise. The same arguments always give the same files.
+(ls_<nn>.wav, ami_<nn>.wav, swc_<nn>.wav, musan_<nn>.wav, demand_<nn>.wav, soh_<nn>.wav),
+separated by short gaps of very quiet noise. The same arguments always give the same files.
+Noise files have no truth spans: everything that fires in them is a false accept.
 
-Level: each piece has its DC removed, then gets one static gain per source (AMI: per
-meeting, since its meetings were recorded ~30 dB apart), chosen so the source's median
-active-speech level (loudest 30% of 20 ms frames) is --level-dbfs, the board's level.
-The natural loudness spread inside a source is kept. A peak limiter then keeps every
-sample at or below -1 dBFS by lowering the gain only around the peaks.
+Level: each piece has its DC removed. Speech pieces then get one static gain per source (AMI:
+per meeting, since its meetings were recorded ~30 dB apart), chosen so the source's median
+active-speech level (loudest 30% of 20 ms frames) is --level-dbfs, the board's level. The
+natural loudness spread inside a source is kept. Noise keeps the level it was recorded (or, for
+MUSAN, mastered) at: the datasets already range from quiet rooms to buses and loud music.
+A peak limiter then keeps every sample at or below -1 dBFS by lowering the gain only around
+the peaks.
 
 Train / val / test split (by speaker, so no voice is in two splits): every group goes to
 one split, ~50 / 25 / 25% of each keyword and of the utterances / recordings, assigned
@@ -65,19 +80,25 @@ greedily biggest group first. Groups:
   SWC          reader (Wikipedia user name)
   AMI          meetings linked by any shared participant (connected components): the same
                people are in every meeting of a series, and 30 people are in more than one
+  noise        dataset_noise/manifest.csv's group: MUSAN music by artist, Sound Bible noise by
+               recorder, Free Sound noise by file, a DEMAND environment, a Sounds of Home home.
+               Balanced on usable (speech-free) hours and group count. A noise group keeps the
+               split it has in splits.csv, so downloading more audio never moves a group
 Train is reserved for training (not built here); val and test are each built as above.
 
 Outputs in --out (default eval_recordings_public/):
   splits.csv            one row per group: source, group, split, members (the speakers /
-                        readers / meetings in it), items, keyword counts. Only groups with
-                        split = train may ever be trained on
+                        readers / meetings in it; a noise group's own name), items, keyword
+                        counts. Only groups with split = train may ever be trained on
   <split>/              val/ and test/, each with:
     <stem>.wav          16 kHz, 16-bit mono (gitignored: rebuild instead)
     <stem>_truth.csv    start_s, end_s, label, file   (file = source utterance / excerpt id)
     manifest.csv        one row per piece: where it is in which WAV, and where it came from
     clips/<label>/      1 s clips cut from the WAVs: one per keyword (centred on the word,
                         or shifted to the piece's edge where that's the source's edge),
-                        and CLIPS_OTHER_PER_KEYWORD x as many 'other' (speech, no keyword)
+                        CLIPS_OTHER_PER_KEYWORD x as many 'other' (speech, no keyword) and
+                        CLIPS_BACKGROUND_PER_KEYWORD x as many '_background_noise_' (from the
+                        noise pieces, the model's background class)
     clips.csv           one row per clip: file, label, where it's from (and the word's span)
     build_info.json     settings of each source's build and the SHA-256 of every output file
 
@@ -88,22 +109,28 @@ After a build (or with --check, on an existing build) each split is checked:
             they came from, unknown labels, a speaker that isn't in this split in
             splits.csv, a clip that isn't 1 s or is outside its piece, a keyword clip
             without its whole word, or neither centred on it nor at a piece edge that's
-            a source edge, an 'other' clip overlapping a keyword / ignore span
-            -> exit code 1
+            a source edge, an 'other' clip overlapping a keyword / ignore span, a
+            background clip outside a noise piece, a truth span in a noise file, a noise
+            piece overlapping speech found by noise_speech.py, a noise group that isn't in
+            this split -> exit code 1
   warnings  keyword spans shorter than MIN_KEYWORD_S or longer than MAX_KEYWORD_S,
             or QUIET_SPAN_DB quieter than the audio around them (misaligned?), and
             pieces with more than HIGH_GAIN_DB of gain (boosted near-silence?), a
-            source median speech level more than 1 dB from the target, and keywords
-            too close to a piece edge inside the source (the piece needs more padding)
-It also prints each source's speech-level spread and how many pieces the limiter touched.
+            source median speech level more than 1 dB from the target, keywords
+            too close to a piece edge inside the source (the piece needs more padding),
+            a Sounds of Home excerpt with a muted stretch (missed speech removal?), and a
+            source with less noise than requested
+It also prints each source's level spread and how many pieces the limiter touched.
 A build also reports, per source, whether it came out identical to the previous
 build (build_info.json), and warns if it didn't with the same settings.
 
 Usage (from HostSW/):
+    python EvalScripts/noise_speech.py          # once, after download_noise.py
     python EvalScripts/make_public_eval.py --stats
     python EvalScripts/make_public_eval.py
     python EvalScripts/make_public_eval.py --check
     python EvalScripts/make_public_eval.py --splits val --sources ls --ls-negative-min 60
+    python EvalScripts/make_public_eval.py --sources soh --noise-min 2400
 """
 
 import argparse
@@ -124,9 +151,12 @@ import scipy.ndimage
 import scipy.signal
 import soundfile as sf
 
+import noise_speech
+
 SCRIPT_DIR = pathlib.Path(__file__).resolve().parent
 HOSTSW_DIR = SCRIPT_DIR.parent
 DEFAULT_DATA_DIR = HOSTSW_DIR / "dataset_public"
+DEFAULT_NOISE_DIR = noise_speech.DEFAULT_NOISE_DIR
 DEFAULT_OUT_DIR = HOSTSW_DIR / "eval_recordings_public"
 
 SAMPLE_RATE_HZ = 16000
@@ -141,8 +171,29 @@ KEYWORD_STEMS = ["FORWARD", "BACKWARD", "STOP"]
 # Contain a keyword's letters but not its sound: negative audio, not 'ignore'
 NOT_KEYWORD = {"CHRISTOPHER", "CHRISTOPHERS", "ARISTOPHANES", "ARISTOPHANIC"}
 
-SOURCES = ["ls", "ami", "swc"]
-SOURCE_NAMES = {"ls": "librispeech", "ami": "ami", "swc": "swc"}
+# Speech sources, then background noise. New sources go at the end: a source's index seeds its
+# random generator, so inserting one would change the others' picks
+SPEECH_SOURCES = ["ls", "ami", "swc"]
+NOISE_SOURCES = ["musan", "demand", "soh"]
+SOURCES = SPEECH_SOURCES + NOISE_SOURCES
+SOURCE_NAMES = {"ls": "librispeech", "ami": "ami", "swc": "swc",
+                "musan": "musan", "demand": "demand", "soh": "sounds_of_home"}
+NOISE_SOURCE_OF = {"musan": "musan", "demand": "demand", "soh": "soh"}   # dataset_noise manifest 'source'
+
+# Background noise. A MUSAN file without vocals gives its speech-free stretches of at least
+# NOISE_MIN_PIECE_S (short sound effects included), cut evenly into pieces of at most
+# NOISE_MAX_PIECE_S, so a long track is several pieces. Sounds of Home and DEMAND (EXCERPT_NOISE) give NOISE_EXCERPT_S
+# excerpts between speech spans. A Sounds of Home excerpt with a muted stretch (MUTED_DBFS for
+# MUTED_S: far below any room's noise floor, ~-60 dBFS) is skipped: speech removal that the
+# labels missed. Defaults give ~35 h of noise per split, about as much as the speech
+EXCERPT_NOISE = {"demand", "soh"}
+NOISE_MIN_PIECE_S = 5.0
+NOISE_MAX_PIECE_S = 300.0
+NOISE_EXCERPT_S = 60.0
+MUTED_DBFS = -90.0
+MUTED_S = 0.5
+DEFAULT_NOISE_MIN = 2100
+
 
 # Speaker-group split. Every group (LibriSpeech speaker, SWC reader, AMI meetings linked by a
 # shared participant) goes to one split, so no speaker is in two. Groups are assigned greedily,
@@ -172,6 +223,14 @@ SPAN_ROUNDING_S = 1e-5
 CLIPS_OTHER_PER_KEYWORD = 2
 CLIP_OTHER_MIN_REL_DB = -15.0
 OTHER_LABEL = "other"
+# Background clips: random 1 s windows of the noise pieces, chosen in proportion to their length
+CLIPS_BACKGROUND_PER_KEYWORD = 1
+BACKGROUND_LABEL = "_background_noise_"
+CLIP_LABELS = KEYWORDS + [OTHER_LABEL, BACKGROUND_LABEL]
+CLIP_FIELDS = ["file", "label", "wav", "start_s", "end_s", "piece_id", "source", "span_start_s", "span_end_s"]
+# Seeds the clips' random generator (the source count when there were only the speech sources,
+# so their picks didn't change when noise was added)
+CLIPS_RNG_KEY = 3
 
 LS_NEGATIVES_PER_SPEAKER = 12
 EXCERPT_S = 20.0         # AMI / SWC excerpt length
@@ -220,7 +279,9 @@ ACTIVE_TOP_SHARE = 0.3
 PEAK_LIMIT_DBFS = -1.0
 LIMITER_WINDOW_S = 0.005
 
-OUTPUT_NAME = re.compile(r"^(ls|ami|swc)_\d+(\.wav|_truth\.csv)$")
+OUTPUT_NAME = re.compile(rf"^({'|'.join(SOURCES)})_\d+(\.wav|_truth\.csv)$")
+MANIFEST_FIELDS = ["wav", "start_s", "end_s", "source", "piece_id", "group", "speakers", "keywords", "category",
+                   "src_file", "src_start_s", "src_end_s", "src_duration_s", "gain_db", "limit_db"]
 
 
 def word_label(raw):
@@ -248,6 +309,7 @@ class Piece:
     start_s: float           # within the source audio
     end_s: float
     spans: list = field(default_factory=list)  # (start_s, end_s, label), relative to start_s
+    category: str = ""       # noise: dataset_noise manifest category (musan/music/jamendo...)
 
     @property
     def duration_s(self):
@@ -322,11 +384,11 @@ def ls_aligned_spans(align_root, utt):
     return [(start, end, label) for (start, end, w), label in zip(words, utt.labels) if label]
 
 
-def warn_if_short(source, negatives_s, negative_min):
+def warn_if_short(source, negatives_s, negative_min, hint=""):
     """FA/hour rests on the negative audio, so a source that ran out shouldn't pass unnoticed."""
     if negatives_s < negative_min * 60:
         print(f"  WARNING: {SOURCE_NAMES[source]}: only {negatives_s / 60:.0f} of the "
-              f"{negative_min:g} negative minutes requested")
+              f"{negative_min:.0f} negative minutes requested{hint}")
 
 
 def round_robin(items, key, rng):
@@ -451,23 +513,75 @@ def excerpt(source, rec, start_s, end_s):
                  start_s, end_s, spans)
 
 
-def longest_zero_run(audio):
-    """Length in samples of the longest run of exact zeros."""
-    edges = np.diff(np.concatenate([[0], (audio == 0).astype(np.int8), [0]]))
+def read_mono(path, start_s, end_s):
+    """[start_s, end_s) of an audio file, downmixed, at its own rate: (float32 audio, rate)."""
+    rate = sf.info(str(path)).samplerate
+    audio, _ = sf.read(str(path), start=round(start_s * rate), stop=round(end_s * rate),
+                       dtype="float32", always_2d=True)
+    return audio.mean(axis=1), rate
+
+
+def frame_powers(audio, rate=SAMPLE_RATE_HZ):
+    """Mean power of each ACTIVE_FRAME_S frame, DC removed per frame."""
+    n = round(ACTIVE_FRAME_S * rate)
+    frames = audio[: len(audio) // n * n].reshape(-1, n)
+    return ((frames - frames.mean(axis=1, keepdims=True)) ** 2).mean(axis=1)
+
+
+def longest_run(mask):
+    """Length of the longest run of True."""
+    edges = np.diff(np.concatenate([[0], mask.astype(np.int8), [0]]))
     starts, ends = np.flatnonzero(edges == 1), np.flatnonzero(edges == -1)
     return int((ends - starts).max()) if starts.size else 0
 
 
-def is_dead_audio(audio_path, start_s, end_s):
-    """True for a stretch with a dropout (a long run of digital zeros) or near-silence."""
-    rate = sf.info(str(audio_path)).samplerate
-    audio, _ = sf.read(str(audio_path), start=round(start_s * rate), stop=round(end_s * rate),
-                       dtype="float32", always_2d=True)
+def muted_run_s(audio, rate=SAMPLE_RATE_HZ):
+    """Longest stretch, in seconds, of ACTIVE_FRAME_S frames below MUTED_DBFS."""
+    return longest_run(frame_powers(audio, rate) < 10 ** (MUTED_DBFS / 10)) * ACTIVE_FRAME_S
+
+
+def is_dead_audio(audio_path, start_s, end_s, muted=False):
+    """True for a stretch with a dropout, or near-silence (RMS below DEAD_RMS_DBFS). A dropout is
+    DEAD_ZERO_RUN_S of digital zeros, or with muted, MUTED_S below MUTED_DBFS: how Sounds of Home's
+    speech removal looks. Not that for speech: clean recordings' pauses can be that quiet."""
+    audio, rate = read_mono(audio_path, start_s, end_s)
     if audio.size == 0:
         return True
-    audio = audio.mean(axis=1)
     rms_dbfs = 20 * np.log10(np.sqrt(np.mean(audio ** 2)) + 1e-12)
-    return longest_zero_run(audio) >= DEAD_ZERO_RUN_S * rate or rms_dbfs < DEAD_RMS_DBFS
+    dropout = (muted_run_s(audio, rate) >= MUTED_S if muted
+               else longest_run(audio == 0) >= DEAD_ZERO_RUN_S * rate)
+    return dropout or rms_dbfs < DEAD_RMS_DBFS
+
+
+def free_stretches(blocked, duration_s):
+    """The [start, end) stretches of [0, duration_s) outside the blocked (start, end) spans."""
+    stretches, last = [], 0.0
+    for start, end in sorted(blocked) + [(duration_s, duration_s)]:
+        if start > last:
+            stretches.append((last, min(start, duration_s)))
+        last = max(last, end)
+    return stretches
+
+
+def pick_excerpts(recordings, excerpt_s, target_s, accept, rng):
+    """Excerpts of excerpt_s between blocked spans: [(key, start_s)]. recordings are
+    (key, group, duration_s, blocked spans). Each free stretch holds as many excerpts as fit, end
+    to end from a random offset; they're taken round-robin over the groups (each group's 1st
+    before any group's 2nd, in random order), if accept(key, start_s, end_s), up to target_s."""
+    slots = []
+    for key, group, duration_s, blocked in recordings:
+        for a, b in free_stretches(blocked, duration_s):
+            n = int((b - a) // excerpt_s)
+            if n:
+                offset = a + float(rng.uniform(0, (b - a) - n * excerpt_s))
+                slots += [(group, key, offset + k * excerpt_s) for k in range(n)]
+    picked = []
+    for _, key, start in round_robin(slots, lambda s: s[0], rng):
+        if len(picked) * excerpt_s >= target_s:
+            break
+        if accept(key, start, start + excerpt_s):
+            picked.append((key, start))
+    return picked
 
 
 def overlap_s(starts, ends, start_s, end_s):
@@ -500,39 +614,21 @@ def build_excerpts(source, recordings, negative_min, args, rng):
                        if not is_dead_audio(rec.audio_path, s, e)]
     pieces = select_keyword_pieces(candidates, args.max_per_keyword, args.max_per_speaker, rng)
 
-    # Negative excerpts: round-robin over groups (meetings / readers), a random recording
-    # of the group and a random position in it. No keyword or ignore word, no overlap with
-    # a keyword excerpt, and enough of it covered by aligned words.
-    by_group = defaultdict(list)
-    for rec in recordings:
-        if rec.duration_s > EXCERPT_S:
-            by_group[rec.group_key].append(rec)
-    groups = sorted(by_group)
-    taken = {rec.rec_id: [tuple(r) for r in keyword_ranges[rec.rec_id]] for rec in recordings}
-    negatives_s = 0.0
-    tries = 0
-    max_tries = 50 * max(len(recordings), math.ceil(negative_min * 60 / EXCERPT_S))
-    while groups and negatives_s < negative_min * 60 and tries < max_tries:
-        for group in [groups[i] for i in rng.permutation(len(groups))]:
-            tries += 1
-            recs = by_group[group]
-            rec = recs[rng.integers(len(recs))]
-            start = rng.uniform(0, rec.duration_s - EXCERPT_S)
-            end = start + EXCERPT_S
-            if any(s < end and start < e for s, e in taken[rec.rec_id]):
-                continue
-            if overlap_s(rec.blocked_starts, rec.blocked_ends, start, end) > 0:
-                continue
-            if overlap_s(rec.word_starts, rec.word_ends, start, end) < rec.min_coverage * EXCERPT_S:
-                continue
-            if is_dead_audio(rec.audio_path, start, end):
-                continue
-            taken[rec.rec_id].append((start, end))
-            pieces.append(excerpt(source, rec, start, end))
-            negatives_s += EXCERPT_S
-            if negatives_s >= negative_min * 60:
-                break
-    warn_if_short(source, negatives_s, negative_min)
+    # Negative excerpts (pick_excerpts), round-robin over groups (meetings / readers): no keyword
+    # or ignore word, no overlap with a keyword excerpt, enough of it covered by aligned words
+    by_id = {rec.rec_id: rec for rec in recordings}
+
+    def accept(rec_id, start, end):
+        rec = by_id[rec_id]
+        return (overlap_s(rec.word_starts, rec.word_ends, start, end) >= rec.min_coverage * (end - start)
+                and not is_dead_audio(rec.audio_path, start, end))
+
+    blocked = [(rec.rec_id, rec.group_key, rec.duration_s,
+                [tuple(r) for r in keyword_ranges[rec.rec_id]] + list(zip(rec.blocked_starts, rec.blocked_ends)))
+               for rec in recordings]
+    negatives = pick_excerpts(blocked, EXCERPT_S, negative_min * 60, accept, rng)
+    pieces += [excerpt(source, by_id[key], start, start + EXCERPT_S) for key, start in negatives]
+    warn_if_short(source, len(negatives) * EXCERPT_S, negative_min)
     return pieces
 
 
@@ -741,6 +837,124 @@ def build_swc(recordings, data_dir, args, rng):
     return build_excerpts("swc", recordings, args.swc_negative_min, args, rng)
 
 
+# --- Background noise (dataset_noise) ----------------------------------------
+
+@dataclass
+class NoiseFile:
+    """A file of dataset_noise/manifest.csv, with its speech spans (noise_speech.py)."""
+    source: str              # this script's source: musan / demand / soh
+    file: str                # relative to the noise dir
+    path: pathlib.Path
+    category: str
+    group: str
+    vocals: str
+    duration_s: float
+    speech: list             # [(start_s, end_s)], widened by noise_speech's margin
+
+    @property
+    def kind(self):
+        """Split balance dimension: a MUSAN folder (music/jamendo, noise/free-sound...), so each
+        split gets its share of every one, or the source for DEMAND / Sounds of Home."""
+        return self.category.split("/", 1)[1] if self.source == "musan" else self.source
+
+    def piece_spans(self):
+        """MUSAN: [(start_s, end_s)] of its pieces: each speech-free stretch of at least
+        NOISE_MIN_PIECE_S, cut evenly into pieces of at most NOISE_MAX_PIECE_S. None with vocals
+        (or unknown vocals)."""
+        if self.vocals != "no":
+            return []
+        spans = []
+        for a, b in free_stretches(self.speech, self.duration_s):
+            if b - a >= NOISE_MIN_PIECE_S:
+                n = math.ceil((b - a) / NOISE_MAX_PIECE_S)
+                spans += [(a + k * (b - a) / n, a + (k + 1) * (b - a) / n) for k in range(n)]
+        return spans
+
+    def usable_s(self):
+        """Seconds of eval noise this file can give: excerpts between speech (EXCERPT_NOISE), or
+        its MUSAN pieces."""
+        if self.source in EXCERPT_NOISE:
+            return sum((b - a) // NOISE_EXCERPT_S * NOISE_EXCERPT_S
+                       for a, b in free_stretches(self.speech, self.duration_s))
+        return sum(b - a for a, b in self.piece_spans())
+
+
+_speech_scores = {}
+
+
+def speech_scores(noise_dir):
+    """noise_speech.py's scores, loaded once."""
+    if noise_dir not in _speech_scores:
+        _speech_scores[noise_dir] = noise_speech.load_scores(noise_dir)
+    return _speech_scores[noise_dir]
+
+
+def load_noise_source(source, noise_dir):
+    """A noise source's files with their speech spans, or None if the data isn't there."""
+    name = SOURCE_NAMES[source]
+    manifest = noise_dir / "manifest.csv"
+    if not manifest.exists():
+        print(f"  {name}: {manifest} not found, skipping (run download_noise.py)")
+        return None
+    try:
+        scores = speech_scores(noise_dir)
+    except FileNotFoundError as e:
+        print(f"  {name}: {e}, skipping")
+        return None
+    files, unanalysed = [], 0
+    with open(manifest, newline="") as f:
+        for r in csv.DictReader(f):
+            if r["source"] != NOISE_SOURCE_OF[source]:
+                continue
+            duration = float(r["duration_s"])
+            try:
+                speech = noise_speech.speech_spans(scores, r["file"], duration)
+            except KeyError:
+                unanalysed += 1
+                continue
+            files.append(NoiseFile(source, r["file"], noise_dir / r["file"], r["category"], r["group"],
+                                   r["vocals"], duration, speech))
+    if unanalysed:
+        print(f"  WARNING: {name}: {unanalysed} files not checked for speech yet, left out "
+              f"(run python EvalScripts/noise_speech.py)")
+    if not files:
+        print(f"  {name}: no files in {manifest}, skipping")
+        return None
+    groups = {id(f): f.group for f in files}
+    return SourceData(source, files, groups, {g: [g] for g in set(groups.values())})
+
+
+def noise_piece(source, f, start_s, end_s):
+    folder = pathlib.PurePath(f.file).parent.name   # DEMAND files are all ch01, Sounds of Home stems repeat per mic
+    return Piece(source, f"{folder}_{f.path.stem}_{start_s:.2f}", [], f.group, f.path, start_s, end_s,
+                 category=f.category)
+
+
+def build_musan_pieces(source, files):
+    """Every file's MUSAN pieces (NoiseFile.piece_spans)."""
+    return [noise_piece(source, f, a, b) for f in files for a, b in f.piece_spans()]
+
+
+def build_noise_excerpts(source, files, target_s, rng):
+    """NOISE_EXCERPT_S excerpts between speech spans (pick_excerpts), round-robin over the files,
+    up to target_s, without dropouts (Sounds of Home: without muted stretches either)."""
+    by_file = {f.file: f for f in files}
+    muted = source == "soh"
+    picked = pick_excerpts([(f.file, f.file, f.duration_s, f.speech) for f in files], NOISE_EXCERPT_S, target_s,
+                           lambda key, start, end: not is_dead_audio(by_file[key].path, start, end, muted), rng)
+    return [noise_piece(source, by_file[key], start, start + NOISE_EXCERPT_S) for key, start in picked]
+
+
+def fixed_noise_s(noise, split):
+    """Seconds of MUSAN and DEMAND noise a split gets (all it has; Sounds of Home fills the rest)."""
+    total = 0.0
+    for source in ("musan", "demand"):
+        if source in noise:
+            loaded, split_of = noise[source]
+            total += sum(f.usable_s() for f in loaded.items if split_of[f.group] == split)
+    return total
+
+
 # --- Sources and the train / val / test split --------------------------------
 
 @dataclass
@@ -755,6 +969,8 @@ class SourceData:
     def keywords(self, item):
         if isinstance(item, LsUtterance):
             return [l for l in item.labels if l in KEYWORDS]
+        if isinstance(item, NoiseFile):
+            return []
         return [w.label for w in item.words if w.label in KEYWORDS]
 
 
@@ -795,28 +1011,42 @@ def load_source(source, data_dir, args):
     return SourceData(source, utts, groups, {g: sorted(m) for g, m in members.items()})
 
 
-def assign_splits(data, seed):
-    """{group: 'train' | 'val' | 'test'} for one source. Greedy: groups in order of size
-    (keyword count, then item count; ties in seeded random order), each to the split that
-    minimises the squared distance of every keyword's and the items' split shares from
-    SPLIT_FRACTIONS. Big groups go first so the many small ones can even out the rest."""
-    group_keywords = defaultdict(list)
-    group_items = Counter()
+def group_sizes(data):
+    """{group: Counter} of what a split balances: per speech group its keyword counts and items
+    (utterances / recordings), per noise group its usable hours per kind (NoiseFile.kind) and 1 group."""
+    sizes = defaultdict(Counter)
     for item in data.items:
-        group = data.group[id(item)]
-        group_keywords[group] += data.keywords(item)
-        group_items[group] += 1
-    dims = KEYWORDS + ["items"]
-    sizes = {g: Counter(group_keywords[g]) + Counter({"items": group_items[g]}) for g in group_items}
-    totals = {d: max(1, sum(c[d] for c in sizes.values())) for d in dims}
+        size = sizes[data.group[id(item)]]
+        if data.source in NOISE_SOURCES:
+            size[item.kind] += item.usable_s() / 3600
+            size["groups"] = 1
+        else:
+            size.update(data.keywords(item))
+            size["items"] += 1
+    return sizes
 
-    rng = np.random.default_rng(seed)
-    groups = sorted(group_items)
-    groups = [groups[i] for i in rng.permutation(len(groups))]
-    groups.sort(key=lambda g: (-sum(sizes[g][k] for k in KEYWORDS), -group_items[g]))   # stable: ties stay random
 
+def split_dims(data):
+    """What a source's split shows and balances, apart from its group / item count: keywords, or
+    noise kinds."""
+    return sorted({f.kind for f in data.items}) if data.source in NOISE_SOURCES else KEYWORDS
+
+
+def assign_splits(data, seed, existing=None):
+    """({group: 'train' | 'val' | 'test'}, group_sizes()) for one source. Groups in existing
+    ({group: split}, noise sources: from splits.csv) keep their split, so downloading more audio
+    never moves a group whose audio may already have been trained or evaluated on. The rest go
+    greedily in order of size (keywords / usable hours, then items; ties in seeded random order),
+    each to the split that minimises the squared distance of every dimension's split shares from
+    SPLIT_FRACTIONS. Big groups go first so the many small ones can even out the rest."""
+    sizes = group_sizes(data)
+    dims = split_dims(data) + (["groups"] if data.source in NOISE_SOURCES else ["items"])
+    totals = {d: sum(c[d] for c in sizes.values()) or 1 for d in dims}
     filled = {split: Counter() for split in SPLIT_FRACTIONS}
     split_of = {}
+    for group, split in (existing or {}).items():
+        split_of[group] = split
+        filled[split] += sizes.get(group, Counter())
 
     def cost(split, size):
         total = 0.0
@@ -826,44 +1056,60 @@ def assign_splits(data, seed):
                 total += (share - frac) ** 2
         return total
 
+    rng = np.random.default_rng(seed)
+    groups = sorted(g for g in sizes if g not in split_of)
+    groups = [groups[i] for i in rng.permutation(len(groups))]
+    groups.sort(key=lambda g: (-sum(sizes[g][d] for d in dims[:-1]), -sizes[g][dims[-1]]))   # stable: ties stay random
     for group in groups:
         best = min(SPLIT_FRACTIONS, key=lambda sp: cost(sp, sizes[group]))
         filled[best] += sizes[group]
         split_of[group] = best
-    return split_of, group_keywords
+    return split_of, sizes
+
+
+def existing_splits(out_dir, source):
+    """{group: split} of a source in splits.csv ({} if there's none)."""
+    path = out_dir / SPLITS_CSV
+    if not path.exists():
+        return {}
+    with open(path, newline="") as f:
+        return {r["group"]: r["split"] for r in csv.DictReader(f) if r["source"] == SOURCE_NAMES[source]}
 
 
 def write_splits(out_dir, assignments):
     """Writes splits.csv: one row per group, keeping rows of sources not reassigned this time.
-    It's what the training step reads: only 'train' groups may be trained on."""
+    It's what the training step reads: only 'train' groups may be trained on. assignments:
+    {source: (SourceData, split_of, group_sizes())}."""
     path = out_dir / SPLITS_CSV
     rows = []
     if path.exists():
         with open(path, newline="") as f:
             rows = [r for r in csv.DictReader(f) if r["source"] not in {SOURCE_NAMES[s] for s in assignments}]
-    for source, (data, split_of, group_keywords) in assignments.items():
+    for source, (data, split_of, sizes) in assignments.items():
         items_per_group = Counter(data.group[id(i)] for i in data.items)
         for group in sorted(split_of):
-            counts = Counter(group_keywords[group])
             rows.append({"source": SOURCE_NAMES[source], "group": group, "split": split_of[group],
                          "members": " ".join(data.members.get(group, [group])),
                          "items": items_per_group[group],
-                         **{f"n_{kw}": counts[kw] for kw in KEYWORDS}})
+                         **{f"n_{kw}": sizes.get(group, Counter())[kw] for kw in KEYWORDS}})
     rows.sort(key=lambda r: (SOURCES.index(next(k for k, v in SOURCE_NAMES.items() if v == r["source"])), r["group"]))
     with open(path, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0]))
         writer.writeheader()
         writer.writerows(rows)
-    print(f"Wrote {path}:")
-    for source in assignments:
-        name = SOURCE_NAMES[source]
-        src_rows = [r for r in rows if r["source"] == name]
-        for split in ["train", "val", "test"]:
-            r = [x for x in src_rows if x["split"] == split]
-            kw = {k: sum(int(x[f"n_{k}"]) for x in r) for k in KEYWORDS}
-            total = {k: sum(int(x[f"n_{k}"]) for x in src_rows) or 1 for k in KEYWORDS}
-            print(f"  {name:12s} {split:5s} {len(r):5d} groups  " + "  ".join(
-                f"{k} {kw[k]:4d} ({100 * kw[k] / total[k]:3.0f}%)" for k in KEYWORDS))
+    print(f"Wrote {path}: groups per split, and their keywords (speech) or usable hours (noise)")
+    for source, (data, split_of, sizes) in assignments.items():
+        noise = source in NOISE_SOURCES
+        dims = split_dims(data)
+        per_split = {split: Counter() for split in SPLIT_FRACTIONS}
+        for group, split in split_of.items():
+            per_split[split] += sizes.get(group, Counter())
+        n_groups = Counter(split_of.values())
+        for split, filled in per_split.items():
+            cells = [f"{d} {filled[d]:6.1f} h" if noise else f"{d} {int(filled[d]):4d}" for d in dims]
+            shares = [100 * filled[d] / (sum(c[d] for c in per_split.values()) or 1) for d in dims]
+            print(f"  {SOURCE_NAMES[source]:14s} {split:5s} {n_groups[split]:5d} groups  "
+                  + "  ".join(f"{c} ({p:3.0f}%)" for c, p in zip(cells, shares)))
 
 
 def read_splits(out_dir):
@@ -879,10 +1125,7 @@ def read_splits(out_dir):
 
 def load_piece(piece):
     """The piece's audio as 16 kHz mono float32 (resampled / downmixed if needed)."""
-    rate = sf.info(str(piece.audio_path)).samplerate
-    audio, _ = sf.read(str(piece.audio_path), start=round(piece.start_s * rate),
-                       stop=round(piece.end_s * rate), dtype="float32", always_2d=True)
-    audio = audio.mean(axis=1)
+    audio, rate = read_mono(piece.audio_path, piece.start_s, piece.end_s)
     if rate != SAMPLE_RATE_HZ:
         g = math.gcd(rate, SAMPLE_RATE_HZ)
         audio = scipy.signal.resample_poly(audio, SAMPLE_RATE_HZ // g, rate // g).astype(np.float32)
@@ -892,11 +1135,9 @@ def load_piece(piece):
 def active_speech_db(audio):
     """Speech level ignoring pauses: mean power of the loudest ACTIVE_TOP_SHARE of
     ACTIVE_FRAME_S frames, with DC removed per frame."""
-    n = round(ACTIVE_FRAME_S * SAMPLE_RATE_HZ)
-    frames = audio[: len(audio) // n * n].reshape(-1, n)
-    if frames.size == 0:
+    power = np.sort(frame_powers(audio))
+    if power.size == 0:
         return -240.0
-    power = np.sort(((frames - frames.mean(axis=1, keepdims=True)) ** 2).mean(axis=1))
     top = power[-max(1, round(ACTIVE_TOP_SHARE * len(power))):]
     return float(10 * np.log10(np.mean(top) + 1e-12))
 
@@ -921,7 +1162,9 @@ def limit_peaks(audio, limit_dbfs=PEAK_LIMIT_DBFS):
 def piece_gains(source, pieces, level_dbfs):
     """Static gain in dB per piece_id: one per source, or one per recording for sources in
     LEVEL_PER_RECORDING (from the whole recording's active-speech level), shifted so the
-    source's median piece active-speech level is level_dbfs."""
+    source's median piece active-speech level is level_dbfs. Noise keeps its recorded level: 0 dB."""
+    if source in NOISE_SOURCES:
+        return {p.piece_id: 0.0 for p in pieces}
     levels = {}
     for piece in pieces:
         audio = load_piece(piece)
@@ -981,7 +1224,10 @@ def assemble(source, pieces, out_dir, args, rng):
                 "source": SOURCE_NAMES[source], "piece_id": piece.piece_id, "group": piece.group,
                 "speakers": " ".join(sorted(set(piece.speakers))),
                 "keywords": " ".join(piece.keywords),
-                "src_file": str(piece.audio_path.relative_to(args.data_dir)),
+                "category": piece.category,
+                # relative to its dataset dir: dataset_public/, or dataset_noise/ for noise
+                "src_file": str(piece.audio_path.relative_to(
+                    args.noise_dir if source in NOISE_SOURCES else args.data_dir)),
                 "src_start_s": f"{piece.start_s:.3f}", "src_end_s": f"{piece.end_s:.3f}",
                 "src_duration_s": f"{sf.info(str(piece.audio_path)).duration:.3f}",
                 "gain_db": f"{gain_db:.2f}", "limit_db": f"{limit_db:.2f}",
@@ -1131,13 +1377,40 @@ def write_clips(out_dir, rng):
         if len(taken) < need:
             skipped["'other' clips short (not enough free speech)"] += need - len(taken)
 
+    # Background clips: CLIPS_BACKGROUND_PER_KEYWORD x the keyword clips, random 1 s windows of
+    # the noise pieces (a piece chosen in proportion to its length), not overlapping each other.
+    # Positions first, then each WAV is read once
+    noise_names = {SOURCE_NAMES[s] for s in NOISE_SOURCES}
+    noise_pieces = [(wav, p) for wav in sorted(by_wav) for p in sorted(by_wav[wav], key=lambda p: float(p["start_s"]))
+                    if p["source"] in noise_names and float(p["end_s"]) - float(p["start_s"]) > CLIP_S]
+    need = CLIPS_BACKGROUND_PER_KEYWORD * sum(keyword_clips.values())
+    if need and noise_pieces:
+        room = np.array([float(p["end_s"]) - float(p["start_s"]) - CLIP_S for _, p in noise_pieces])
+        chosen = defaultdict(list)
+        for _ in range(50 * need):
+            if sum(len(v) for v in chosen.values()) >= need:
+                break
+            wav, piece = noise_pieces[rng.choice(len(noise_pieces), p=room / room.sum())]
+            start = float(rng.uniform(float(piece["start_s"]), float(piece["end_s"]) - CLIP_S))
+            if not any(s < start + CLIP_S and start < s + CLIP_S for s, _ in chosen[wav]):
+                chosen[wav].append((start, piece))
+        for wav in sorted(chosen):
+            pcm, _ = sf.read(str(out_dir / wav), dtype="int16")
+            for start, piece in chosen[wav]:
+                save(pcm, wav, start, BACKGROUND_LABEL, piece)
+        got = sum(len(v) for v in chosen.values())
+        if got < need:
+            skipped["background clips short"] += need - got
+    elif need:
+        skipped["background clips (no noise in this split)"] += need
+
     rows.sort(key=lambda r: r["file"])
     with open(out_dir / "clips.csv", "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[0]))
+        writer = csv.DictWriter(f, fieldnames=CLIP_FIELDS)
         writer.writeheader()
         writer.writerows(rows)
     counts = Counter(r["label"] for r in rows)
-    print(f"Wrote {len(rows)} clips to {clips_dir}: " + ", ".join(f"{k} {counts[k]}" for k in KEYWORDS + [OTHER_LABEL])
+    print(f"Wrote {len(rows)} clips to {clips_dir}: " + ", ".join(f"{k} {counts[k]}" for k in CLIP_LABELS)
           + f" ({shifted} keyword clips shifted to a source edge)"
           + ("; skipped " + ", ".join(f"{v} {k}" for k, v in skipped.items()) if skipped else ""))
 
@@ -1152,6 +1425,14 @@ def clips_digest(out_dir):
 
 
 def summarise(source, pieces, n_files):
+    if source in NOISE_SOURCES:
+        minutes = Counter()
+        for p in pieces:
+            minutes[p.category.split("/", 1)[1]] += p.duration_s / 60
+        print(f"{SOURCE_NAMES[source]}: {n_files} files, {len(pieces)} pieces, {len({p.group for p in pieces})} "
+              f"groups, {sum(minutes.values()):.1f} min")
+        print("  " + ", ".join(f"{c} {m:.0f}" for c, m in sorted(minutes.items())) + " (min)")
+        return
     keyword_pieces = [p for p in pieces if p.keywords]
     counts = Counter(kw for p in pieces for kw in p.keywords)
     ignores = sum(label == IGNORE_LABEL for p in pieces for _, _, label in p.spans)
@@ -1174,7 +1455,7 @@ def print_counts(name, hours, speakers, kw_counts, kw_speakers, ignores):
           + f"  ignore {ignores:4d}")
 
 
-def stats(data_dir, ami_channel, out_dir):
+def stats(data_dir, ami_channel, out_dir, noise_dir):
     ls_root = data_dir / "LibriSpeech"
     if ls_root.is_dir():
         print("LibriSpeech (transcripts; hours from SPEAKERS.TXT / file count, approximate):")
@@ -1239,12 +1520,31 @@ def stats(data_dir, ami_channel, out_dir):
         with open(path, newline="") as f:
             rows = list(csv.DictReader(f))
         print(f"Split ({path}): groups and keyword occurrences per split")
-        for name in [SOURCE_NAMES[s] for s in SOURCES]:
+        for name in [SOURCE_NAMES[s] for s in SPEECH_SOURCES]:
             for split in ["train", "val", "test"]:
                 r = [x for x in rows if x["source"] == name and x["split"] == split]
                 if r:
-                    print(f"  {name:12s} {split:5s} {len(r):5d} groups  "
+                    print(f"  {name:14s} {split:5s} {len(r):5d} groups  "
                           + "  ".join(f"{k} {sum(int(x[f'n_{k}']) for x in r):5d}" for k in KEYWORDS))
+    noise_stats(noise_dir, out_dir)
+
+
+def noise_stats(noise_dir, out_dir):
+    """Usable (speech-free) hours of background noise per source, kind and split."""
+    print(f"Background noise ({noise_dir}): files, hours, and usable hours (speech-free; see the docstring)")
+    for source in NOISE_SOURCES:
+        loaded = load_noise_source(source, noise_dir)
+        if loaded is None:
+            continue
+        split_of = existing_splits(out_dir, source)
+        table = defaultdict(lambda: [0, 0.0, 0.0])
+        for f in loaded.items:
+            t = table[(split_of.get(f.group, "(new)"), f.kind)]
+            t[0] += 1
+            t[1] += f.duration_s / 3600
+            t[2] += f.usable_s() / 3600
+        for (split, kind), (n, hours, usable) in sorted(table.items()):
+            print(f"  {SOURCE_NAMES[source]:14s} {split:5s} {kind:21s} {n:5d} files {hours:6.1f} h  {usable:6.1f} h usable")
 
 
 # --- Checks ------------------------------------------------------------------
@@ -1260,6 +1560,19 @@ MAX_LISTED = 10           # problems listed per check (the rest are only counted
 # Settings that change the output (written to build_info.json per source)
 BUILD_SETTINGS = ["max_per_keyword", "max_per_speaker", "ls_negative_min", "ami_channel",
                   "ami_negative_min", "swc_negative_min", "level_dbfs", "seed"]
+NOISE_BUILD_SETTINGS = ["noise_min", "seed"]
+
+
+def build_settings(source, args):
+    """What a source's build depends on, apart from this script (build_info.json). Noise also
+    depends on noise_speech.py's detection settings and output, and the noise manifest's groups."""
+    if source not in NOISE_SOURCES:
+        return {k: getattr(args, k) for k in BUILD_SETTINGS}
+    return {**{k: getattr(args, k) for k in NOISE_BUILD_SETTINGS},
+            "speech_thresholds": noise_speech.YAMNET_THRESHOLDS,
+            "speech_margin_s": noise_speech.SPEECH_MARGIN_S,
+            "speech_scores_sha256": file_sha256(args.noise_dir / noise_speech.SCORES_NAME),
+            "noise_manifest_sha256": file_sha256(args.noise_dir / "manifest.csv")}
 
 
 def output_files(out_dir):
@@ -1297,7 +1610,7 @@ def update_build_info(out_dir, args, built):
     and reports whether the rebuilt sources came out the same as the previous build."""
     old = read_build_info(out_dir)
     files = output_hashes(out_dir)
-    settings = {k: getattr(args, k) for k in BUILD_SETTINGS}
+    settings = {source: build_settings(source, args) for source in built}
     script = file_sha256(pathlib.Path(__file__))
 
     print("\nCompared with the previous build:")
@@ -1315,7 +1628,7 @@ def update_build_info(out_dir, args, built):
             print(f"  {SOURCE_NAMES[source]}: identical ({len(after)} files)")
             continue
         print(f"  {SOURCE_NAMES[source]}: {len(changed)} changed, {len(added)} added, {len(removed)} removed files")
-        if previous.get("settings") != settings:
+        if previous.get("settings") != settings[source]:
             print("    (settings changed)")
         elif previous.get("script_sha256") != script:
             print("    (make_public_eval.py changed since the previous build)")
@@ -1328,7 +1641,7 @@ def update_build_info(out_dir, args, built):
 
     sources = dict(old["sources"])
     for source in built:
-        sources[source] = {"settings": settings, "script_sha256": script}
+        sources[source] = {"settings": settings[source], "script_sha256": script}
     info = {"sources": dict(sorted(sources.items())), "files": files}
     (out_dir / BUILD_INFO_NAME).write_text(json.dumps(info, indent=1) + "\n")
 
@@ -1358,10 +1671,11 @@ class CheckReport:
                 print(f"    ... and {len(messages) - MAX_LISTED} more")
 
 
-def check_build(out_dir):
+def check_build(out_dir, noise_dir=DEFAULT_NOISE_DIR):
     """Checks the files in out_dir. Prints a report; returns the number of errors."""
     print(f"\nChecking {out_dir}...")
     report = CheckReport()
+    noise_names = {SOURCE_NAMES[s] for s in NOISE_SOURCES}
     manifest_path = out_dir / "manifest.csv"
     if not manifest_path.exists():
         print(f"  ERROR: no {manifest_path}")
@@ -1418,12 +1732,19 @@ def check_build(out_dir):
             if peak_db > PEAK_LIMIT_DBFS + 0.01:
                 report.add("error", f"peak above {PEAK_LIMIT_DBFS:g} dBFS (limiter failed?)",
                            f"{wav_name} {piece['piece_id']}: {peak_db:+.2f} dBFS")
+            # Sounds of Home: a muted stretch is speech removal the labels missed
+            if source == "soh" and muted_run_s(x, rate) >= MUTED_S:
+                report.add("warning", f"Sounds of Home piece with a muted stretch (>= {MUTED_S:g} s below "
+                           f"{MUTED_DBFS:g} dBFS)", f"{wav_name} {piece['piece_id']}")
 
         with open(truth, newline="") as f:
             spans = list(csv.DictReader(f))
         for span in spans:
             start, end, label = float(span["start_s"]), float(span["end_s"]), span["label"]
             where = f"{wav_name} @{start:.2f}s {label} ({span['file']})"
+            if source in NOISE_SOURCES:
+                report.add("error", "truth span in a noise file", where)
+                continue
             if end <= start:
                 report.add("error", "empty or reversed span", f"{where}: {start:.6f}-{end:.6f}s")
             # Inside the piece it says it came from
@@ -1459,11 +1780,30 @@ def check_build(out_dir):
                 report.add("warning", f"keyword span >{-QUIET_SPAN_DB:g} dB quieter than the "
                            f"{QUIET_CONTEXT_S:g} s around it", f"{where}: {relative_db:+.1f} dB")
 
-    # Split membership: every speaker / meeting must belong to this split in splits.csv
+    # Noise pieces must be clear of the speech noise_speech.py found (and its margin)
+    noise_rows = [r for r in manifest if r["source"] in noise_names]
+    if noise_rows:
+        try:
+            scores = speech_scores(noise_dir)
+        except FileNotFoundError as e:
+            scores = None
+            report.add("warning", "noise not checked for speech", str(e))
+        for r in noise_rows if scores is not None else []:
+            try:
+                speech = noise_speech.speech_spans(scores, r["src_file"], float(r["src_duration_s"]))
+            except KeyError:
+                report.add("error", "noise piece's file not in the speech scores", f"{r['wav']} {r['src_file']}")
+                continue
+            # the manifest's source times have 3 decimals
+            if any(s < float(r["src_end_s"]) - 1e-3 and float(r["src_start_s"]) + 1e-3 < e for s, e in speech):
+                report.add("error", "noise piece overlaps speech", f"{r['wav']} {r['piece_id']} ({r['src_file']})")
+
+    # Split membership: every speaker / meeting / noise group must belong to this split in splits.csv
     split_of = read_splits(out_dir.parent)
     if out_dir.name in SPLITS and split_of is not None:
         for r in manifest:
-            members = [r["group"]] if r["source"] == "ami" else [m for m in r["speakers"].split() if m != "?"]
+            members = ([r["group"]] if r["source"] == "ami" or r["source"] in noise_names
+                       else [m for m in r["speakers"].split() if m != "?"])
             for member in members:
                 got = split_of.get((r["source"], member))
                 if got != out_dir.name:
@@ -1512,8 +1852,16 @@ def check_build(out_dir):
                                 or (abs(end - piece_end) <= tol and at_source_end(piece))):
                             report.add("error", "keyword clip neither centred nor at a piece edge "
                                        "that's a source edge", c["file"])
-                elif overlaps_any(spans_by_wav[c["wav"]], start, end):
-                    report.add("error", "'other' clip overlaps a keyword / ignore span", c["file"])
+                elif c["label"] == OTHER_LABEL:
+                    if overlaps_any(spans_by_wav[c["wav"]], start, end):
+                        report.add("error", "'other' clip overlaps a keyword / ignore span", c["file"])
+                    if piece["source"] in noise_names:
+                        report.add("error", "'other' clip from a noise piece", c["file"])
+                elif c["label"] == BACKGROUND_LABEL:
+                    if piece["source"] not in noise_names:
+                        report.add("error", "background clip outside a noise piece", c["file"])
+                else:
+                    report.add("error", "unknown clip label", f"{c['file']}: {c['label']}")
 
     # Gain: large values mean a quiet source; very large ones near-silence boosted to speech level
     gains, limits = defaultdict(list), defaultdict(list)
@@ -1522,29 +1870,39 @@ def check_build(out_dir):
         limits[r["wav"].split("_")[0]].append(float(r.get("limit_db") or 0))
         if float(r["gain_db"]) > HIGH_GAIN_DB:
             report.add("warning", f"gain above {HIGH_GAIN_DB:g} dB", f"{r['wav']} {r['piece_id']}: {r['gain_db']} dB")
-    # Each source's median speech level should be the target it was built with
+    # Each speech source's median speech level should be the target it was built with
     built_with = read_build_info(out_dir)["sources"]
     for source, lv in levels.items():
         target = built_with.get(source, {}).get("settings", {}).get("level_dbfs")
         if target is not None and abs(np.median(lv) - target) > 1.0:
             report.add("warning", "source median speech level more than 1 dB from target",
                        f"{SOURCE_NAMES.get(source, source)}: {np.median(lv):.1f} dBFS, built for {target:g}")
+    # As much noise as was asked for (Sounds of Home fills up to it)
+    noise_min = built_with.get("soh", {}).get("settings", {}).get("noise_min")
+    noise_s = sum(per_source[s]["seconds"] for s in NOISE_SOURCES if s in per_source)
+    piece_s = sum(float(r["end_s"]) - float(r["start_s"]) for r in noise_rows)
+    if noise_min is not None and piece_s < noise_min * 60 - NOISE_EXCERPT_S:
+        report.add("warning", "less noise than requested", f"{piece_s / 60:.0f} of {noise_min:g} min "
+                   f"(download more Sounds of Home hours for this split's homes)")
 
-    print(f"  {'source':<12} {'files':>5} {'min':>6}  " + "  ".join(f"{k:>8}" for k in KEYWORDS + [IGNORE_LABEL])
+    width = max(len(SOURCE_NAMES[s]) for s in SOURCES)
+    print(f"  {'source':<{width}} {'files':>5} {'min':>6}  " + "  ".join(f"{k:>8}" for k in KEYWORDS + [IGNORE_LABEL])
           + "   gain dB: min / median / max")
-    for source in sorted(per_source):
+    for source in sorted(per_source, key=lambda s: SOURCES.index(s) if s in SOURCES else len(SOURCES)):
         c, g = per_source[source], np.array(gains[source])
-        print(f"  {SOURCE_NAMES.get(source, source):<12} {c['files']:5d} {c['seconds'] / 60:6.1f}  "
+        print(f"  {SOURCE_NAMES.get(source, source):<{width}} {c['files']:5d} {c['seconds'] / 60:6.1f}  "
               + "  ".join(f"{c[k]:8d}" for k in KEYWORDS + [IGNORE_LABEL])
               + (f"   {g.min():+.1f} / {np.median(g):+.1f} / {g.max():+.1f}" if g.size else ""))
-    print(f"  {'source':<12} active speech dBFS 5% / 50% / 95% (spread)   pieces limited, largest reduction")
-    for source in sorted(levels):
+    speech_s = sum(per_source[s]["seconds"] for s in SPEECH_SOURCES if s in per_source)
+    print(f"  speech {speech_s / 3600:.1f} h, noise {noise_s / 3600:.1f} h (WAV time, gaps included)")
+    print(f"  {'source':<{width}} active level dBFS 5% / 50% / 95% (spread)   pieces limited, largest reduction")
+    for source in sorted(levels, key=lambda s: SOURCES.index(s) if s in SOURCES else len(SOURCES)):
         p5, p50, p95 = np.percentile(levels[source], [5, 50, 95])
         lim = np.array(limits[source])
-        print(f"  {SOURCE_NAMES.get(source, source):<12} {p5:7.1f} / {p50:6.1f} / {p95:6.1f}  ({p95 - p5:4.1f} dB)"
+        print(f"  {SOURCE_NAMES.get(source, source):<{width}} {p5:7.1f} / {p50:6.1f} / {p95:6.1f}  ({p95 - p5:4.1f} dB)"
               f"{'':9s}{int(np.sum(lim > 0)):4d} of {len(lim)}, {lim.max() if lim.size else 0:.1f} dB")
     if clip_counts:
-        print("  clips: " + ", ".join(f"{k} {clip_counts[k]}" for k in KEYWORDS + [OTHER_LABEL])
+        print("  clips: " + ", ".join(f"{k} {clip_counts[k]}" for k in CLIP_LABELS)
               + f" ({clip_shifted} keyword clips shifted to a source edge)")
     report.print()
     errors, warnings = report.count("error"), report.count("warning")
@@ -1556,32 +1914,38 @@ def check_build(out_dir):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Build eval WAVs + truth CSVs from LibriSpeech, AMI and Spoken Wikipedia word alignments."
+        description="Build eval WAVs + truth CSVs from LibriSpeech, AMI and Spoken Wikipedia word alignments, "
+                    "plus speech-free background noise (MUSAN, DEMAND, Sounds of Home)."
     )
     parser.add_argument("--data-dir", type=pathlib.Path, default=DEFAULT_DATA_DIR,
                         help=f"public datasets dir (default: {DEFAULT_DATA_DIR})")
+    parser.add_argument("--noise-dir", type=pathlib.Path, default=DEFAULT_NOISE_DIR,
+                        help=f"background noise dir, from download_noise.py + noise_speech.py (default: {DEFAULT_NOISE_DIR})")
     parser.add_argument("-o", "--out", type=pathlib.Path, default=DEFAULT_OUT_DIR,
                         help=f"output dir (default: {DEFAULT_OUT_DIR})")
     parser.add_argument("--stats", action="store_true", help="only print keyword counts per split / source")
     parser.add_argument("--check", action="store_true",
                         help="only check the existing build in --out (a build always checks itself too)")
     parser.add_argument("--sources", nargs="+", choices=SOURCES, default=SOURCES,
-                        help="sources to build (default: ls ami swc)")
+                        help=f"sources to build (default: {' '.join(SOURCES)})")
     parser.add_argument("--splits", nargs="+", choices=SPLITS, default=SPLITS,
                         help="splits to build / check (default: val test)")
     parser.add_argument("--max-per-keyword", type=int,
                         help="limit on occurrences of a keyword per source and split (default: no limit)")
     parser.add_argument("--max-per-speaker", type=int,
                         help="limit on occurrences of a keyword per speaker (default: no limit)")
-    parser.add_argument("--ls-negative-min", type=float, default=1500,
-                        help="minutes of LibriSpeech utterances without keywords (default: 1500)")
+    parser.add_argument("--ls-negative-min", type=float, default=950,
+                        help="minutes of LibriSpeech utterances without keywords (default: 950)")
     parser.add_argument("--ami-channel", default=DEFAULT_AMI_CHANNEL,
                         help=f"AMI recording to use, e.g. Mix-Headset, Mix-Lapel, Array1-01 "
                              f"(default: {DEFAULT_AMI_CHANNEL})")
-    parser.add_argument("--ami-negative-min", type=float, default=600,
-                        help="minutes of AMI excerpts without keywords (default: 600)")
-    parser.add_argument("--swc-negative-min", type=float, default=900,
-                        help="minutes of SWC excerpts without keywords (default: 900)")
+    parser.add_argument("--ami-negative-min", type=float, default=380,
+                        help="minutes of AMI excerpts without keywords (default: 380)")
+    parser.add_argument("--swc-negative-min", type=float, default=570,
+                        help="minutes of SWC excerpts without keywords (default: 570)")
+    parser.add_argument("--noise-min", type=float, default=DEFAULT_NOISE_MIN,
+                        help=f"minutes of background noise per split: every usable MUSAN and DEMAND file of the "
+                             f"split, then Sounds of Home excerpts up to this (default: {DEFAULT_NOISE_MIN})")
     parser.add_argument("--level-dbfs", type=float, default=DEFAULT_LEVEL_DBFS,
                         help=f"median active-speech level of each source (default: {DEFAULT_LEVEL_DBFS:g}, "
                              f"the board recordings' level)")
@@ -1592,25 +1956,40 @@ def parse_args():
 def main():
     args = parse_args()
     args.data_dir = args.data_dir.resolve()
+    args.noise_dir = args.noise_dir.resolve()
     if args.stats:
-        stats(args.data_dir, args.ami_channel, args.out)
+        stats(args.data_dir, args.ami_channel, args.out, args.noise_dir)
         return
     if args.check:
         dirs = [args.out / split for split in args.splits if (args.out / split).is_dir()]
         if not dirs:
             sys.exit(f"no built splits in {args.out}")
-        sys.exit(1 if sum(check_build(d) for d in dirs) else 0)
+        sys.exit(1 if sum(check_build(d, args.noise_dir) for d in dirs) else 0)
 
     args.out.mkdir(parents=True, exist_ok=True)
     data, assignments = {}, {}
-    for source in args.sources:
+    for source in [s for s in args.sources if s in SPEECH_SOURCES]:
         print(f"Loading {SOURCE_NAMES[source]}...")
         loaded = load_source(source, args.data_dir, args)
         if loaded is None:
             continue
-        split_of, group_keywords = assign_splits(loaded, args.seed)
+        split_of, sizes = assign_splits(loaded, args.seed)
         data[source] = (loaded, split_of)
-        assignments[source] = (loaded, split_of, group_keywords)
+        assignments[source] = (loaded, split_of, sizes)
+    # Noise: every noise source is loaded and split when any is built (its split never changes,
+    # see assign_splits), as Sounds of Home fills up to --noise-min after MUSAN and DEMAND
+    noise = {}
+    if any(s in NOISE_SOURCES for s in args.sources):
+        for source in NOISE_SOURCES:
+            print(f"Loading {SOURCE_NAMES[source]}...")
+            loaded = load_noise_source(source, args.noise_dir)
+            if loaded is None:
+                continue
+            split_of, sizes = assign_splits(loaded, args.seed, existing_splits(args.out, source))
+            noise[source] = (loaded, split_of)
+            assignments[source] = (loaded, split_of, sizes)
+            if source in args.sources:
+                data[source] = noise[source]
     if not data:
         sys.exit("no source data found")
     write_splits(args.out, assignments)
@@ -1624,11 +2003,21 @@ def main():
         for source, (loaded, split_of) in data.items():
             items = [i for i in loaded.items if split_of[loaded.group[id(i)]] == split]
             groups = {loaded.group[id(i)] for i in items}
-            print(f"\n[{split}] Selecting {SOURCE_NAMES[source]} from {len(items)} "
-                  f"{'utterances' if source == 'ls' else 'recordings'} of {len(groups)} groups...")
+            kind = "utterances" if source == "ls" else "files" if source in NOISE_SOURCES else "recordings"
+            print(f"\n[{split}] Selecting {SOURCE_NAMES[source]} from {len(items)} {kind} of {len(groups)} groups...")
             # One generator per source and split, so building some gives the same picks as building all
             rng = np.random.default_rng([args.seed, SOURCES.index(source), SPLITS.index(split)])
-            pieces = builders[source](items, args.data_dir, args, rng)
+            if source == "soh":
+                target_s = args.noise_min * 60 - fixed_noise_s(noise, split)
+                pieces = build_noise_excerpts(source, items, target_s, rng)
+                warn_if_short(source, len(pieces) * NOISE_EXCERPT_S, target_s / 60,
+                              " (Sounds of Home fills up to --noise-min: download more hours of this split's homes)")
+            elif source in EXCERPT_NOISE:
+                pieces = build_noise_excerpts(source, items, math.inf, rng)
+            elif source in NOISE_SOURCES:
+                pieces = build_musan_pieces(source, items)
+            else:
+                pieces = builders[source](items, args.data_dir, args, rng)
             if not pieces:
                 continue
             # Remove this source's files from an earlier build, so none are left over
@@ -1643,9 +2032,9 @@ def main():
             print(f"[{split}] nothing built")
             continue
         write_manifest(out_dir, manifest, {SOURCE_NAMES[s] for s in built})
-        write_clips(out_dir, np.random.default_rng([args.seed, len(SOURCES), SPLITS.index(split)]))
+        write_clips(out_dir, np.random.default_rng([args.seed, CLIPS_RNG_KEY, SPLITS.index(split)]))
         update_build_info(out_dir, args, built)
-        errors += check_build(out_dir)
+        errors += check_build(out_dir, args.noise_dir)
     sys.exit(1 if errors else 0)
 
 
@@ -1656,7 +2045,8 @@ def write_manifest(out_dir, rows, built_sources):
         with open(path, newline="") as f:
             rows = [r for r in csv.DictReader(f) if r["source"] not in built_sources] + rows
     with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=list(rows[-1]))
+        # Rows kept from a build before a column was added get it empty
+        writer = csv.DictWriter(f, fieldnames=MANIFEST_FIELDS, restval="")
         writer.writeheader()
         writer.writerows(rows)
     print(f"Wrote {path} ({len(rows)} pieces)")

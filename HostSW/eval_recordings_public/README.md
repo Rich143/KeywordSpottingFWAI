@@ -1,9 +1,11 @@
 # Public-dataset evaluation set
 
-Eval clips built from public speech datasets by `EvalScripts/make_public_eval.py`. They're in the same
-`<stem>.wav` + `<stem>_truth.csv` format as [`eval_recordings/`](../eval_recordings/README.md), with
-hundreds of speakers and hours of non-keyword speech. That gives false accepts per hour enough
-events to compare models, which the board recordings alone don't.
+Eval recordings built from public speech datasets, plus speech-free background noise, by
+`EvalScripts/make_public_eval.py`. They're in the same `<stem>.wav` + `<stem>_truth.csv` format as
+[`eval_recordings/`](../eval_recordings/README.md), with hundreds of speakers and hours of
+non-keyword speech and noise. That gives false accepts per hour enough events to compare models,
+which the board recordings alone don't, and shows separately how often the model fires on speech
+and on everything else.
 
 Keyword positions come from the datasets' word-level alignments, so nothing is labelled by hand.
 The audio isn't the board mic, so treat this set as a complement to `eval_recordings/`, not a
@@ -14,6 +16,9 @@ replacement:
   Mix-Headset recording, all participants' headset mics summed into one file.
 - **SWC** (Spoken Wikipedia) is about 500 volunteers reading Wikipedia articles on their own home
   mics: the widest range of voices and recording setups.
+- **Background noise** (see [Background noise](#background-noise)): music without vocals and
+  assorted noise from **MUSAN**, environments from **DEMAND**, and household audio from **Sounds
+  of Home**. Its truth files are empty: anything that fires in it is a false accept.
 
 ## Train / val / test split
 
@@ -25,12 +30,18 @@ splits:
 | LibriSpeech | speaker |
 | SWC | reader (Wikipedia user name) |
 | AMI | meetings linked by any shared participant |
+| MUSAN music | artist (a performer's tracks sound alike) |
+| MUSAN noise | Sound Bible: who recorded it; Free Sound: the file (no names given) |
+| DEMAND | environment |
+| Sounds of Home | home (its living room and kitchen mics record at the same time) |
 
 AMI needs the linking rule because the same four people are in every meeting of a series
 (ES2002a–d), and 30 participants are in more than one series. The Idiap IS/IN meetings link 25
 series into one group. Groups are assigned greedily, biggest first, so each split gets close to its
 share of every keyword and of the utterances or recordings. The rare `backward` is spread the same
-way.
+way. Noise groups are balanced on usable (speech-free) hours, per MUSAN folder so each split gets
+every genre, and on group count. A noise group keeps the split it has in `splits.csv`, so
+downloading more audio never moves one.
 
 | Split | Used for |
 |---|---|
@@ -55,25 +66,70 @@ The clips are for clip-level evaluation and training later:
     `ignore` span.
 - **`other` clips:** twice as many, as random 1 s windows of speech that overlap no keyword or
   `ignore` span.
-- **No background clips:** these sources have no real background audio.
+- **`_background_noise_` clips** (the model's background class): as many as keyword clips, as
+  random 1 s windows of the noise pieces, picked in proportion to their length.
 - **The word barely stands out in keyword clips.** It's only ~1–3 dB above the rest of its window,
   because the neighbouring words are in it too. That makes them much harder than Speech Commands'
   isolated words.
+
+## Background noise
+
+About as many hours of noise as speech, so false accepts can be read on each (`fa_per_hour_speech`
+and `fa_per_hour_noise`). It comes from `dataset_noise/` (`download_noise.py`). Only speech-free
+audio is used: speech there would be unlabelled `other`, and could even contain a keyword.
+`noise_speech.py` finds the speech:
+- **Labels decide where a dataset has them:** Sounds of Home's own sound-event labels (PANNs,
+  frames of 0.21 s, made before its authors muted the speech they found), and MUSAN's vocals
+  annotation.
+- **YAMNet decides where it doesn't:** MUSAN noise at a score of 0.2 (cautious: real speech
+  scores above 0.3 in ~95% of its 0.96 s windows), DEMAND at 0.5 (confident speech only). MUSAN
+  music also cuts out what YAMNet is confident (≥ 0.5) is speech, despite the vocals label.
+- **Checked by ear** (a spot-check file, Nov 2026): YAMNet's MUSAN detections were speech. Its
+  extra detections in Sounds of Home (up to 1.0, where the labels had none) and DEMAND's quieter
+  environments (0.2–0.8) were at most faint, unintelligible speech, fine as background. So Sounds
+  of Home goes by its labels alone, and DEMAND counts only confident speech.
+- Every speech window or frame gets 2 s of margin each side.
+- MUSAN files without vocals give every speech-free stretch of 5 s or more, cut evenly into pieces
+  of at most 5 min, so a long track is several pieces and short sound effects are used too.
+  Sounds of Home hours and DEMAND recordings are cut into 60 s excerpts between their speech.
+  Every MUSAN piece and DEMAND excerpt of a split goes in, then Sounds of Home fills up to 35 h:
+  in val and test that's about 6 h MUSAN, 10 min DEMAND and 29 h Sounds of Home.
+
+| Type | Why | What the labels say | What YAMNet says | Downloaded | Usable, all splits | val / test |
+|---|---|---|---|---|---|---|
+| **MUSAN music**, instrumental: Free Music Archive (incl. western art), HD Classical, Jamendo, Kevin MacLeod | music and TV-like sound, a common loud background | vocals yes 226 files (14.2 h), unknown 15 (0.9 h), no 419 (27.6 h): only "no" is used | 19 of the 419 instrumental files have a confident speech moment (spoken samples?): cut out with the margin | 660 files, 42.6 h | 419 files, 27.5 h | 5.0 / 4.8 h |
+| **MUSAN noise**: Free Sound, Sound Bible | everyday and technical sounds: vehicles, water, animals, phones, tools, bells, footsteps | no speech labels; MUSAN says "no intelligible speech" | speech in 202 of the 843 Free Sound files (crowds, chatter) and 10 of Sound Bible's 87: cut out with the margin | 930 files, 6.2 h (714 under 30 s) | 625 files, 5.0 h | 1.0 / 1.3 h |
+| **DEMAND** | real environments, recorded at their natural level: home, office, nature, street, transport | none; the 5 environments with conversation weren't downloaded | confident speech in the bus (most of it), metro, station, traffic and park; 8 environments have none | 13 environments, 1.1 h | 0.8 h of 60 s excerpts from 11 environments (not bus, metro) | val 9 min (field, traffic); test 12 min (kitchen, river, station) |
+| **Sounds of Home** | real homes, kitchen and living room mics, over a week: dishes, taps, doors, cooking, appliances, pets, footsteps, music | speech or TV in 95 of the 336 h (muted in the audio); 187 h label-free with the margin | not used (its extra detections were faint, unintelligible speech) | 336 h: 36 h per mic in the val / test homes (2, 3, 4, 7), 8 h per mic in the train homes (1, 5, 6) | 132 h in 60 s excerpts | 28.9 / 28.7 h (val: homes 2, 4; test: 3, 7) |
+
+Sounds of Home fills each split up to the 35 h `--noise-min` asks for, after MUSAN and DEMAND. Its
+val / test homes have 36 h per mic downloaded, the train homes 8 h, from:
+```
+python EvalScripts/download_noise.py --sources soh --soh-mics 03 04 05 06 07 08 13 14 --soh-hours-per-mic 32
+python EvalScripts/noise_speech.py
+python EvalScripts/make_public_eval.py --sources soh
+```
+(32 extra hours per mic, ~32 GB to download, ~77 GB on disk as 48 kHz WAVs.) Val uses 29 of its
+homes' 55 usable hours and test 29 of 46, so `--noise-min` could go up a little. Training
+on Sounds of Home would want more hours of the train homes (mics 01, 02, 09–12). Each home's two
+mics record at the same time, so they're one group: they can hear the same sound.
 
 ## What's committed
 
 | File | |
 |---|---|
-| `splits.csv` | one row per group: `source`, `group`, `split`, `members` (the speakers / readers / meetings in it), `items`, keyword counts |
+| `splits.csv` | one row per group: `source`, `group`, `split`, `members` (the speakers / readers / meetings in it; a noise group's own name), `items`, keyword counts. A noise file's group is in `dataset_noise/manifest.csv` |
 | `<split>/ls_<nn>_truth.csv`, `ami_…`, `swc_…` | keyword and `ignore` spans; `file` = source utterance / excerpt |
-| `<split>/manifest.csv` | every piece: its position in which WAV, source file and time range, the source's length (`src_duration_s`, which shows whether a piece edge is a source edge), speakers, `gain_db` (static gain), `limit_db` (largest peak reduction by the limiter, 0 if untouched) |
+| `<split>/musan_<nn>_truth.csv`, `demand_…`, `soh_…` | empty (header only): noise |
+| `<split>/manifest.csv` | every piece: its position in which WAV, source file (relative to `dataset_public/` or `dataset_noise/`) and time range, the source's length (`src_duration_s`, which shows whether a piece edge is a source edge), speakers, noise `category`, `gain_db` (static gain; 0 for noise), `limit_db` (largest peak reduction by the limiter, 0 if untouched) |
 | `<split>/clips.csv` | every clip: file, label, which WAV, piece and time it was cut from, and the word's span |
 | `<split>/build_info.json` | each source's build settings and the SHA-256 of every output file, WAVs and clips included |
 | `<split>/eval_history.csv` | scores, one row per model version (see below) |
 
-The WAVs are gitignored (~0.1 GB per hour). Rebuild them from `dataset_public/` with the same
-command and seed; the output is byte-identical, and the build tells you whether it matched
-`build_info.json`.
+The WAVs are gitignored (~0.1 GB per hour). Rebuild them from `dataset_public/` and
+`dataset_noise/` with the same command and seed; the output is byte-identical, and the build tells
+you whether it matched `build_info.json`. Noise also depends on `dataset_noise/speech.npz`
+(`noise_speech.py`), whose hash is in `build_info.json`.
 
 ## 1. Get the data
 
@@ -141,6 +197,12 @@ dataset_public/
     - A keyword that only comes from text normalisation becomes `ignore`. For example, a `/` in a
       URL is read as "forward slash".
     - Negative excerpts must be at least 40% covered by aligned words.
+- **Background noise** goes in `HostSW/dataset_noise/` (gitignored), from `HostSW/`:
+  ```
+  python EvalScripts/download_noise.py      # MUSAN, DEMAND, Sounds of Home (resumable; --dry-run for sizes)
+  python EvalScripts/noise_speech.py        # finds the speech in it -> dataset_noise/speech.npz (~15 min)
+  ```
+  Run `noise_speech.py` again after downloading more: it only analyses new files.
 
 ## 2. Build
 
@@ -149,6 +211,7 @@ From `HostSW/`:
 python EvalScripts/make_public_eval.py --stats      # keyword counts per source and split, writes nothing
 python EvalScripts/make_public_eval.py              # split, then build val/ and test/ (a source without data is skipped)
 python EvalScripts/make_public_eval.py --sources ami   # re-split and rebuild one source; the others' files are kept
+python EvalScripts/make_public_eval.py --sources soh   # e.g. after downloading more Sounds of Home hours
 python EvalScripts/make_public_eval.py --check      # check both splits
 ```
 
@@ -156,9 +219,11 @@ python EvalScripts/make_public_eval.py --check      # check both splits
 |---|---|---|
 | `--max-per-keyword` | no limit | limit on occurrences of a keyword per source and split |
 | `--max-per-speaker` | no limit | limit on occurrences of a keyword per speaker |
-| `--ls-negative-min`, `--ami-negative-min`, `--swc-negative-min` | 1500, 600, 900 | minutes of pieces with no keyword, 50 h per split in total. The build warns if a source runs out. |
+| `--ls-negative-min`, `--ami-negative-min`, `--swc-negative-min` | 950, 380, 570 | minutes of speech pieces with no keyword, ~32 h per split in total, ~35 h with the keyword pieces. The build warns if a source runs out. |
+| `--noise-min` | 2100 | minutes of background noise per split (35 h, as much as the speech): every MUSAN piece and DEMAND excerpt of the split, then Sounds of Home excerpts up to this. The build warns if Sounds of Home runs out. |
 | `--ami-channel` | Mix-Headset | which AMI recording to use |
-| `--level-dbfs` | −21 | median active-speech level of each source (the board recordings' level) |
+| `--level-dbfs` | −21 | median active-speech level of each speech source (the board recordings' level) |
+| `--noise-dir` | `dataset_noise/` | where `download_noise.py` and `noise_speech.py` put the noise |
 | `--seed` | 0 | changes which pieces are picked and the order they're in |
 
 The settings are only recorded in the command, so if you change them, note it in the snapshot notes.
@@ -192,35 +257,51 @@ set also tests how the model copes with loud and soft speech:
   sounds like a new person or someone at a different distance.
 - **Limiter:** a look-ahead peak limiter keeps every sample at or below −1 dBFS. It lowers the
   gain only within about 10 ms of a peak, so the speech keeps its level, and pieces without peaks
-  are untouched. It acts on 8–11% of pieces, mostly breath pops in the AMI headsets and SWC
-  recordings that were made loud. Keywords are rarely affected. The heaviest case is a few loud SWC
-  articles in test, such as `Air-tractor_sledge`: up to 22% of a piece's samples are reduced by over
-  1 dB, and up to 13 dB at the peaks.
+  are untouched. It acts on about 1% of LibriSpeech pieces, 35–37% of AMI's (breath pops in the
+  headsets, raised with the quiet meetings) and 5–23% of SWC's (recordings that were made loud), and
+  on almost every MUSAN music piece, by about 1 dB (mastered to full scale). Keywords are rarely
+  affected. The heaviest cases are a few loud SWC articles in test, such as `Air-tractor_sledge`:
+  up to 22% of a piece's samples are reduced by over 1 dB, and up to 15 dB at the peaks.
 - **Keywords:** they come out around −25 dBFS. That's quieter than on the board (−20), because
   here they're ordinary words in the middle of sentences, not stressed commands.
+- **Noise keeps its recorded level** (DC removed, no gain; the limiter only touches peaks above
+  −1 dBFS). The datasets already range widely: Sounds of Home rooms around −55 dBFS with events up
+  to about −20, DEMAND from −56 (living room) to −22 dBFS (car), MUSAN noise −35 to −12. MUSAN music is
+  at its mastering level, −18 to −9 dBFS (median −14), 3–12 dB above the speech: it stands for
+  loud music in the room, and there's no quiet-music case.
 
 Excerpts that contain a recording dropout are skipped: a run of exact zeros of 0.5 s or more, or an
 RMS below −70 dBFS. ES2012c has 20 s of zeros. The rule uses a run rather than the share of zero
 samples because clean recordings like AMI's Mix-Headset have many zero samples in pauses, in runs of
-at most ~10 ms.
+at most ~10 ms. Sounds of Home excerpts are also skipped for 0.5 s below −90 dBFS: that's how its
+speech removal looks, far below any room's noise floor (about −60 dBFS).
+
+AMI / SWC negative excerpts and Sounds of Home excerpts are picked the same way: each recording's
+stretches between keywords / `ignore` words (or speech) are cut into excerpts end to end from a
+random offset, and taken round-robin over meetings / readers / hours until there are enough.
 
 **Current build** (default settings), per split:
 
-| Split | Source | Files | Minutes | Pieces with keywords (min) | Speakers | forward | backward | stop |
+| Split | Source | Files | Minutes | Pieces with keywords (min) | Speakers / groups | forward | backward | stop |
 |---|---|---|---|---|---|---|---|---|
-| val | LibriSpeech | 338 | 1,733 | 161 | 677 | 400 | 81 | 279 |
-| val | AMI | 122 | 627 | 11 | 48 | 15 | 3 | 19 |
-| val | SWC | 184 | 946 | 21 | 155 | 25 | 8 | 33 |
-| test | LibriSpeech | 338 | 1,732 | 162 | 677 | 403 | 79 | 279 |
-| test | AMI | 122 | 627 | 10 | 45 | 15 | 4 | 17 |
-| test | SWC | 184 | 945 | 20 | 143 | 23 | 6 | 33 |
+| val | LibriSpeech | 226 | 1,159 | 161 | 677 | 400 | 81 | 279 |
+| val | AMI | 78 | 401 | 11 | 48 | 15 | 3 | 19 |
+| val | SWC | 118 | 607 | 21 | 154 | 25 | 8 | 33 |
+| val | MUSAN | 53 | 360 | | 155 | | | |
+| val | DEMAND | 2 | 9 | | 2 | | | |
+| val | Sounds of Home | 347 | 1,752 | | 2 | | | |
+| test | LibriSpeech | 226 | 1,159 | 162 | 677 | 403 | 79 | 279 |
+| test | AMI | 78 | 401 | 10 | 45 | 15 | 4 | 17 |
+| test | SWC | 118 | 606 | 20 | 142 | 23 | 6 | 33 |
+| test | MUSAN | 57 | 372 | | 176 | | | |
+| test | DEMAND | 2 | 12 | | 3 | | | |
+| test | Sounds of Home | 344 | 1,737 | | 2 | | | |
 
-Each split is about 55 h. The size is set by the false accept rates it needs to measure: 50 h gives
-about 50 events at 1 false accept per hour, or ±14% before allowing for clustering by speaker, and
-zero false accepts would show the rate is below about 0.06 per hour. AMI stops at 10 h because its
-hours come from only about 12 speaker groups, and its 25 h per split can't be filled by random 20 s
-excerpts. All three sources are nearly continuous speech, so these rates say little about music, TV
-or a quiet room.
+Each split has 36.1 h of speech and 35.3 h of noise (see [Background noise](#background-noise)).
+The size is set by the false accept rates it needs to measure: 35 h gives about 35 events at 1
+false accept per hour, or ±17% before allowing for clustering by speaker, and zero false accepts
+would show the rate is below about 0.09 per hour. AMI stops at about 6.5 h because its hours come
+from only about 12 speaker groups.
 
 Every keyword of a split's speakers is used, so the classes aren't balanced: `forward` is about half
 of the keywords and LibriSpeech about 88%. The pooled recall leans the same way, so also look at the
@@ -228,11 +309,11 @@ per-keyword and per-source columns. The only keywords left out are those with no
 such as LibriSpeech utterances where the alignment doesn't match the transcript (about 10 per split).
 
 Clips:
-- **val:** 408 `forward`, 70 `backward`, 318 `stop`, 1,592 `other`.
-- **test:** 413 `forward`, 65 `backward`, 315 `stop`, 1,586 `other`.
+- **val:** 408 `forward`, 70 `backward`, 318 `stop`, 1,592 `other`, 796 `_background_noise_`.
+- **test:** 413 `forward`, 65 `backward`, 315 `stop`, 1,586 `other`, 793 `_background_noise_`.
 
 The number of clips is tied to the keywords, not the length of the recordings, so `other` stays at
-exactly twice the keyword clips however many hours of negatives are built.
+exactly twice the keyword clips, and `_background_noise_` at as many, however many hours are built.
 
 ## 3. Check
 
@@ -251,7 +332,10 @@ an existing build.
 - A clip isn't 1 s of 16 kHz mono, or is outside its piece.
 - A keyword clip doesn't contain its whole word, or is neither centred on it nor at a piece edge
   that's also a source edge.
-- An `other` clip overlaps a keyword or `ignore` span.
+- An `other` clip overlaps a keyword or `ignore` span, or comes from noise; a `_background_noise_`
+  clip isn't in a noise piece; a clip has an unknown label.
+- A noise file has a truth span, or a noise piece overlaps speech found by `noise_speech.py`
+  (with its margin).
 
 **Warnings**, which are listed but don't fail the build:
 - A keyword span shorter than 0.2 s or longer than 2 s.
@@ -261,12 +345,15 @@ an existing build.
   quietest AMI meetings need about +28 dB.
 - A source's median speech level is more than 1 dB from the target it was built with.
 - A keyword is too close to a piece edge inside the source, so the piece needs more padding.
+- A Sounds of Home piece has a muted stretch (0.5 s below −90 dBFS): speech removal the labels
+  missed.
+- A split has less noise than `--noise-min`.
 
-It also prints each source's speech-level spread, and how many pieces the limiter touched and by
+It also prints each source's level spread, and how many pieces the limiter touched and by
 how much.
 
-The current build has 6 warnings, all in test. They're keyword spans that are quiet compared with the
-audio around them; the ones listened to in earlier builds turned out to be real words.
+The current build has 6 keyword warnings, all in test. They're keyword spans that are quiet compared
+with the audio around them; the ones listened to in earlier builds turned out to be real words.
 
 A build also reports, per source, whether it came out identical to the previous one. If it changed
 with the same settings, it warns that either the datasets changed or the build isn't reproducible.
@@ -281,7 +368,7 @@ with the same settings, it warns that either the datasets changed or the build i
 ## 4. Score a model
 
 `snapshot_eval.py --dataset public` scores a split. The notebook runs it on val for every model;
-test only on request. The ~55 h of a split take a few minutes with `--jobs 6`.
+test only on request. A split (~71 h today) takes about 4 minutes with `--jobs 6`.
 ```
 python EvalScripts/snapshot_eval.py -v v10 -m tflite_models/kws_v10_int8_softmax.tflite --dataset public --jobs 6
 python EvalScripts/snapshot_eval.py -v v10 -m tflite_models/kws_v10_int8_softmax.tflite --dataset public --split test --jobs 6
@@ -291,8 +378,11 @@ python EvalScripts/snapshot_eval.py -v v10 -m tflite_models/kws_v10_int8_softmax
 Each row has:
 - **Pooled results:** recall (overall and per keyword) and false accepts per hour, from the same
   scoring as the board set.
+- **Speech and noise apart:** `fa_per_hour_speech` / `fa_per_hour_noise`, with `false_accepts_…`
+  and `negative_min_…`. Speech is LibriSpeech, AMI and SWC; noise is MUSAN, DEMAND and Sounds of
+  Home. Each rate is over its own hours, so the overall rate lies between them.
 - **Per-source results:** `recall_ls`, `fa_per_hour_ami`, `keyword_spans_swc`, `negative_min_…`
-  and so on.
+  and so on; noise sources have `fa_per_hour_…` and `negative_min_…` only.
 - **Recall at a false accept budget:** `recall_at_100fa` and so on, described below.
 - **MLflow link:** `mlflow_run_id` and `run_type`.
   - `training`: the row came from the notebook, and the id is that training run.
@@ -306,9 +396,9 @@ stood after that run, as sortable, filterable tables in the run's **Artifacts** 
 
 | Table | Columns |
 |---|---|
-| `1_default_threshold` | recall (overall and per keyword), false accepts and counts at the fixed threshold |
+| `1_default_threshold` | recall (overall and per keyword), false accepts per hour (overall, speech, noise) and counts at the fixed threshold |
 | `2_default_threshold_by_source` | the same per source |
-| `3_budget_300fa`, `4_budget_100fa`, `5_budget_30fa` | recall, false accepts per hour, threshold and events at that budget, per keyword too. Only rows scored since budgets existed |
+| `3_budget_300fa`, `4_budget_100fa`, `5_budget_30fa` | recall, false accepts per hour (overall, speech, noise), threshold and events at that budget, per keyword too. Only rows scored since budgets existed |
 | `6_run_settings` | model path and hash, detection settings, notes, MLflow run id |
 
 Each starts with the version and timestamp. The latest run has the latest history. MLflow shows one
@@ -335,19 +425,23 @@ today:
 | `threshold_at_<b>fa` | the threshold |
 | `fa_events_at_<b>fa` | how many false accepts the rate rests on. The script marks fewer than 10 as too few to rely on |
 | `recall_at_<b>fa_<kw>`, `fa_events_at_<b>fa_<kw>` | each keyword's recall and false accepts at the same threshold: which keywords miss, and which the false accepts come from |
+| `fa_per_hour_at_<b>fa_speech`, `_noise`, `fa_events_at_<b>fa_speech`, `_noise` | the same threshold's false accepts on speech only and on noise only, each per its own hours |
 
 - **Why one threshold:** it's simple and it's what the firmware will run. A model that's less
-  confident on one keyword is penalised for it: v10 gets only 16% `forward` at 100 per hour,
+  confident on one keyword is penalised for it: v10 gets only 22% `forward` at 100 per hour,
   because a threshold strict enough for `backward` and `stop` silences `forward`. Per-keyword
   thresholds, as in the multi-keyword papers, would hide that. Improving the model should fix it.
 - **Test:** the threshold is chosen on val only. A test split is scored at the thresholds val chose
   for the same model and settings, so score val first. Its false accept rate can land above the
   budget, which is the honest result.
+- **Budget on everything together:** the threshold is chosen on all negative hours, speech and
+  noise, as the device hears them. With half the hours noise, which fires less, a budget is easier
+  to meet than on speech alone, so compare these numbers only with rows scored on the same set.
 - **Curve:** a val run adds `reports/public_val_curve.csv` and `public_val_curve.png` to the MLflow
   run: each keyword's miss rate, and their mean, against the total false accepts per hour, with
-  the budgets marked.
+  the budgets marked. The CSV also has `total_fa_per_hour_speech` and `_noise` per threshold.
 - **Changing the budgets:** add lower ones as models improve rather than replacing these. Each
   budget has history columns, and a history with columns the script doesn't know is refused.
-- **Limits:** 55 h of negatives resolves a budget down to about 1 per hour, about 55 events. These
-  rates are per hour of near-continuous speech, so they don't compare directly with published
-  figures.
+- **Limits:** ~70 h of negatives resolves a budget down to about 1 per hour. Published figures are
+  usually per hour of mixed everyday audio; the speech rate here is per hour of near-continuous
+  speech, so it's harsher, and the noise rate depends on which noise. Neither compares directly.

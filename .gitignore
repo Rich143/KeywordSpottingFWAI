@@ -69,6 +69,8 @@ build/
 dataset/
 # Public speech datasets for eval_recordings_public (LibriSpeech, AMI), see make_public_eval.py
 dataset_public/
+# Public background noise (MUSAN, DEMAND, Sounds of Home), see EvalScripts/download_noise.py
+dataset_noise/
 
 # Python
 __pycache__/
