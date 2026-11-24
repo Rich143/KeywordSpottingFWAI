@@ -21,8 +21,8 @@ detections the labels didn't have (up to 1.0 in Sounds of Home, 0.2-0.8 in DEMAN
 environments) were at most faint, unintelligible speech from elsewhere, which is fine as background.
 So Sounds of Home goes by its labels alone, and DEMAND only counts confident detections.
 A file's speech spans (speech_spans()) are its speech frames / windows, widened by a margin each
-side and merged. The eval build cuts Sounds of Home and DEMAND into excerpts between the spans;
-MUSAN files are used whole, so one with any span isn't used.
+side and merged. The eval build cuts its pieces from the stretches between the spans: 60 s
+excerpts of Sounds of Home and DEMAND, and every stretch of 5 s or more of a MUSAN file.
 
 Output: dataset_noise/speech.npz (gitignored, like the audio): per manifest file, the YAMNet
 speech score per window (float16) and, for Sounds of Home, the PANNs speech flag per frame.

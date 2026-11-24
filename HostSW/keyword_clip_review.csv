@@ -1,0 +1,1064 @@
+file,keyword,decision,tier,flags,reviewed
+dataset/backward/0165e0e8_nohash_0.wav,backward,remove,3,near short,2026-11-20T13:36:06
+dataset/backward/02ade946_nohash_1.wav,backward,keep,7,near,2026-11-20T13:58:49
+dataset/backward/02ade946_nohash_4.wav,backward,keep,7,near,2026-11-24T13:15:21
+dataset/backward/03401e93_nohash_0.wav,backward,keep,7,other,2026-11-20T16:06:18
+dataset/backward/03401e93_nohash_1.wav,backward,remove,2,cut_end,2026-11-20T11:04:28
+dataset/backward/042a8dde_nohash_1.wav,backward,keep,7,other,2026-11-20T16:04:18
+dataset/backward/042a8dde_nohash_2.wav,backward,keep,7,near,2026-11-24T13:15:36
+dataset/backward/0585b66d_nohash_4.wav,backward,remove,2,cut_end,2026-11-20T16:10:33
+dataset/backward/067f61e2_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T11:13:23
+dataset/backward/06f6c194_nohash_0.wav,backward,keep,7,near,2026-11-24T13:15:55
+dataset/backward/06f6c194_nohash_1.wav,backward,keep,7,near,2026-11-24T13:15:53
+dataset/backward/0a396ff2_nohash_0.wav,backward,remove,3,partial short,2026-11-20T13:36:19
+dataset/backward/0a5636ca_nohash_0.wav,backward,remove,5,cut_end,2026-11-20T13:43:11
+dataset/backward/0b7ee1a0_nohash_0.wav,backward,keep,5,cut_start,2026-11-20T13:42:44
+dataset/backward/0b7ee1a0_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T11:14:49
+dataset/backward/0ba018fc_nohash_3.wav,backward,keep,7,near,2026-11-24T11:18:25
+dataset/backward/0c540988_nohash_0.wav,backward,remove,2,other cut_end,2026-11-20T11:08:15
+dataset/backward/0d82fd99_nohash_0.wav,backward,keep,5,near cut_end,2026-11-20T13:53:46
+dataset/backward/0f7266cf_nohash_2.wav,backward,keep,5,cut_end,2026-11-24T11:16:20
+dataset/backward/0f7266cf_nohash_3.wav,backward,remove,2,cut_end,2026-11-20T11:02:21
+dataset/backward/131e738d_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T10:56:09
+dataset/backward/131e738d_nohash_4.wav,backward,keep,7,near,2026-11-24T11:17:55
+dataset/backward/13dce503_nohash_1.wav,backward,remove,1,empty short,2026-11-20T10:45:15
+dataset/backward/1496195a_nohash_0.wav,backward,keep,7,other,2026-11-20T16:09:24
+dataset/backward/1496195a_nohash_1.wav,backward,keep,7,other,2026-11-20T16:09:05
+dataset/backward/171edea9_nohash_1.wav,backward,keep,7,near,2026-11-24T13:16:26
+dataset/backward/189cbabe_nohash_0.wav,backward,keep,7,other,2026-11-20T16:08:03
+dataset/backward/195c120a_nohash_2.wav,backward,keep,0,,2026-11-24T13:36:16
+dataset/backward/1a0f9c63_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:01:47
+dataset/backward/1a73dcd1_nohash_0.wav,backward,remove,2,other cut_end,2026-11-20T11:04:01
+dataset/backward/1a994c9f_nohash_4.wav,backward,keep,7,other,2026-11-20T16:04:24
+dataset/backward/1acc97de_nohash_2.wav,backward,remove,2,cut_end,2026-11-20T11:06:45
+dataset/backward/1b18600d_nohash_0.wav,backward,keep,7,other,2026-11-20T16:06:36
+dataset/backward/1b42b551_nohash_3.wav,backward,remove,2,cut_end,2026-11-20T11:07:45
+dataset/backward/1e02ffc5_nohash_4.wav,backward,keep,0,,2026-11-24T13:36:08
+dataset/backward/1ed0b13d_nohash_3.wav,backward,keep,0,,2026-11-24T13:34:12
+dataset/backward/211b928a_nohash_2.wav,backward,keep,0,,2026-11-24T13:37:17
+dataset/backward/226537ab_nohash_0.wav,backward,keep,7,near,2026-11-24T13:19:26
+dataset/backward/234d6a48_nohash_0.wav,backward,keep,5,cut_end,2026-11-24T11:13:18
+dataset/backward/234d6a48_nohash_2.wav,backward,keep,0,,2026-11-24T13:35:56
+dataset/backward/23da904f_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T10:56:51
+dataset/backward/244cc3a5_nohash_0.wav,backward,remove,3,short,2026-11-24T10:55:07
+dataset/backward/24cab2cb_nohash_1.wav,backward,remove,6,partial,2026-11-20T13:55:58
+dataset/backward/25e95412_nohash_1.wav,backward,remove,2,other cut_end,2026-11-20T11:04:34
+dataset/backward/2748cce7_nohash_0.wav,backward,keep,0,,2026-11-24T13:36:35
+dataset/backward/2748cce7_nohash_2.wav,backward,keep,0,,2026-11-24T13:37:15
+dataset/backward/27c24504_nohash_1.wav,backward,keep,7,other,2026-11-20T16:09:37
+dataset/backward/29dce108_nohash_0.wav,backward,keep,7,other,2026-11-20T16:03:32
+dataset/backward/29dce108_nohash_1.wav,backward,keep,7,other,2026-11-20T13:59:16
+dataset/backward/29dce108_nohash_2.wav,backward,keep,7,other,2026-11-20T13:59:20
+dataset/backward/29dce108_nohash_3.wav,backward,remove,7,other,2026-11-20T16:04:35
+dataset/backward/2aca1e72_nohash_0.wav,backward,keep,7,other,2026-11-20T16:09:18
+dataset/backward/2aca1e72_nohash_11.wav,backward,keep,7,other,2026-11-20T16:06:39
+dataset/backward/2aca1e72_nohash_12.wav,backward,keep,7,other,2026-11-20T13:59:09
+dataset/backward/2aca1e72_nohash_13.wav,backward,keep,7,other,2026-11-20T16:02:47
+dataset/backward/2aca1e72_nohash_2.wav,backward,keep,7,other,2026-11-20T16:03:24
+dataset/backward/2aca1e72_nohash_3.wav,backward,keep,7,other,2026-11-20T16:07:21
+dataset/backward/2aca1e72_nohash_4.wav,backward,keep,7,other,2026-11-20T16:04:06
+dataset/backward/2aca1e72_nohash_6.wav,backward,keep,7,other,2026-11-20T16:03:46
+dataset/backward/2aca1e72_nohash_7.wav,backward,keep,7,other,2026-11-20T16:07:23
+dataset/backward/2aca1e72_nohash_8.wav,backward,keep,7,other,2026-11-20T16:09:03
+dataset/backward/2aca1e72_nohash_9.wav,backward,keep,7,other,2026-11-20T16:03:26
+dataset/backward/2b5e346d_nohash_1.wav,backward,keep,0,,2026-11-24T13:36:49
+dataset/backward/2fcb6397_nohash_1.wav,backward,keep,0,,2026-11-24T13:33:48
+dataset/backward/2fcb6397_nohash_4.wav,backward,keep,0,,2026-11-24T13:34:02
+dataset/backward/30060aba_nohash_0.wav,backward,keep,6,partial,2026-11-20T13:56:34
+dataset/backward/30f6e665_nohash_0.wav,backward,remove,0,,2026-11-24T13:36:41
+dataset/backward/3102f006_nohash_3.wav,backward,keep,7,near,2026-11-24T11:17:36
+dataset/backward/31f01a8d_nohash_0.wav,backward,keep,7,near,2026-11-24T11:17:45
+dataset/backward/31f01a8d_nohash_1.wav,backward,keep,7,near,2026-11-24T13:15:12
+dataset/backward/31f01a8d_nohash_2.wav,backward,keep,7,near,2026-11-20T13:56:52
+dataset/backward/31f01a8d_nohash_3.wav,backward,keep,7,near,2026-11-20T13:59:38
+dataset/backward/3291330e_nohash_2.wav,backward,keep,7,near,2026-11-24T13:15:19
+dataset/backward/332d33b1_nohash_0.wav,backward,remove,2,cut_end,2026-11-20T11:02:51
+dataset/backward/333d7ddb_nohash_2.wav,backward,remove,2,cut_end,2026-11-20T11:03:48
+dataset/backward/39833acb_nohash_0.wav,backward,keep,7,other,2026-11-20T16:07:35
+dataset/backward/39833acb_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T11:13:07
+dataset/backward/39833acb_nohash_2.wav,backward,keep,0,,2026-11-24T13:34:10
+dataset/backward/39b5fdab_nohash_0.wav,backward,remove,5,cut_end,2026-11-24T10:56:21
+dataset/backward/3a53b856_nohash_1.wav,backward,remove,2,near cut_end,2026-11-20T11:06:48
+dataset/backward/3a69f765_nohash_0.wav,backward,keep,0,,2026-11-24T13:35:58
+dataset/backward/3a69f765_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T11:16:14
+dataset/backward/3a69f765_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T10:57:26
+dataset/backward/3a929277_nohash_0.wav,backward,keep,7,near,2026-11-24T13:19:51
+dataset/backward/3a929277_nohash_1.wav,backward,keep,0,,2026-11-24T13:36:47
+dataset/backward/3b4f8f24_nohash_0.wav,backward,keep,5,cut_start,2026-11-24T11:16:06
+dataset/backward/3b4f8f24_nohash_2.wav,backward,keep,4,cut_start,2026-11-20T13:39:19
+dataset/backward/3b4f8f24_nohash_3.wav,backward,keep,5,cut_start,2026-11-24T11:14:14
+dataset/backward/3b4f8f24_nohash_4.wav,backward,keep,5,cut_start,2026-11-24T11:14:12
+dataset/backward/3c4aa5ef_nohash_1.wav,backward,keep,7,other,2026-11-20T16:09:14
+dataset/backward/3c4aa5ef_nohash_2.wav,backward,remove,2,cut_end,2026-11-20T11:05:14
+dataset/backward/3cc595de_nohash_2.wav,backward,remove,5,cut_end,2026-11-24T11:15:52
+dataset/backward/3d794813_nohash_0.wav,backward,keep,7,near,2026-11-24T13:14:54
+dataset/backward/3d794813_nohash_1.wav,backward,keep,7,other,2026-11-20T14:00:14
+dataset/backward/3d794813_nohash_3.wav,backward,keep,7,near,2026-11-24T13:15:44
+dataset/backward/3d794813_nohash_4.wav,backward,keep,7,near,2026-11-24T13:16:43
+dataset/backward/3d9bbe2d_nohash_0.wav,backward,keep,5,cut_start cut_end,2026-11-24T11:12:08
+dataset/backward/3d9bbe2d_nohash_3.wav,backward,remove,7,near,2026-11-24T13:14:02
+dataset/backward/3d9bbe2d_nohash_4.wav,backward,keep,7,other,2026-11-20T16:06:27
+dataset/backward/3f45a0cf_nohash_1.wav,backward,keep,7,other,2026-11-20T16:04:04
+dataset/backward/40738a2d_nohash_0.wav,backward,keep,0,,2026-11-24T13:36:28
+dataset/backward/40738a2d_nohash_2.wav,backward,keep,7,near,2026-11-24T13:17:04
+dataset/backward/42398aab_nohash_1.wav,backward,remove,1,partial cut_end short,2026-11-20T10:46:17
+dataset/backward/42f81601_nohash_1.wav,backward,keep,7,near,2026-11-24T13:18:38
+dataset/backward/42f81601_nohash_2.wav,backward,keep,5,cut_start,2026-11-24T11:15:05
+dataset/backward/460209ac_nohash_1.wav,backward,keep,7,near,2026-11-24T13:14:35
+dataset/backward/4c3cddb8_nohash_1.wav,backward,keep,0,,2026-11-24T13:36:30
+dataset/backward/4c6167ca_nohash_1.wav,backward,keep,0,,2026-11-24T13:35:14
+dataset/backward/4c6944d6_nohash_1.wav,backward,keep,7,other,2026-11-20T16:04:09
+dataset/backward/4e99c1b7_nohash_0.wav,backward,keep,5,near cut_end,2026-11-20T13:53:39
+dataset/backward/4e99c1b7_nohash_1.wav,backward,keep,7,near,2026-11-20T13:56:50
+dataset/backward/4fce7686_nohash_0.wav,backward,remove,2,cut_end,2026-11-20T11:05:19
+dataset/backward/508e30ee_nohash_0.wav,backward,keep,7,near,2026-11-24T11:18:06
+dataset/backward/508e30ee_nohash_1.wav,backward,keep,7,other,2026-11-20T16:05:09
+dataset/backward/508e30ee_nohash_3.wav,backward,keep,7,near,2026-11-24T13:15:31
+dataset/backward/513aeddf_nohash_0.wav,backward,keep,5,cut_end,2026-11-24T11:12:38
+dataset/backward/5170b77f_nohash_4.wav,backward,keep,7,other,2026-11-20T16:05:22
+dataset/backward/51c5601d_nohash_2.wav,backward,keep,0,,2026-11-24T13:35:59
+dataset/backward/542f38a2_nohash_1.wav,backward,remove,5,cut_end,2026-11-24T11:13:20
+dataset/backward/54ad8f22_nohash_0.wav,backward,keep,7,other,2026-11-20T16:07:37
+dataset/backward/54aecbd5_nohash_1.wav,backward,keep,7,near,2026-11-24T13:15:14
+dataset/backward/54aecbd5_nohash_2.wav,backward,keep,7,other,2026-11-20T16:10:10
+dataset/backward/559bc36a_nohash_2.wav,backward,keep,5,cut_end,2026-11-24T11:13:27
+dataset/backward/55feffd5_nohash_0.wav,backward,remove,5,cut_end,2026-11-20T13:40:04
+dataset/backward/5a5721f8_nohash_2.wav,backward,keep,7,near,2026-11-24T13:15:10
+dataset/backward/5a5721f8_nohash_3.wav,backward,keep,7,near,2026-11-24T13:18:40
+dataset/backward/5a5721f8_nohash_4.wav,backward,keep,7,near,2026-11-24T13:13:56
+dataset/backward/5a98d407_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T11:12:41
+dataset/backward/5bf1f1cb_nohash_0.wav,backward,remove,2,other cut_end,2026-11-20T11:01:01
+dataset/backward/5c43ac9f_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:01:06
+dataset/backward/5cf1ecce_nohash_1.wav,backward,keep,7,other,2026-11-20T16:08:11
+dataset/backward/5d4e3bb8_nohash_0.wav,backward,remove,2,cut_end short,2026-11-20T11:05:25
+dataset/backward/5ebc1cda_nohash_3.wav,backward,remove,0,,2026-11-24T13:33:46
+dataset/backward/5ebc1cda_nohash_5.wav,backward,remove,2,cut_end,2026-11-20T11:07:50
+dataset/backward/5f01c798_nohash_0.wav,backward,keep,0,,2026-11-24T13:34:08
+dataset/backward/5f9cd2eb_nohash_4.wav,backward,keep,5,cut_start cut_end,2026-11-24T10:56:47
+dataset/backward/608473c9_nohash_1.wav,backward,remove,2,other cut_end short,2026-11-20T11:02:43
+dataset/backward/6124b431_nohash_0.wav,backward,keep,0,,2026-11-24T13:36:51
+dataset/backward/6124b431_nohash_2.wav,backward,keep,5,cut_end,2026-11-24T11:13:04
+dataset/backward/616420be_nohash_3.wav,backward,keep,5,cut_start,2026-11-24T10:56:02
+dataset/backward/616420be_nohash_4.wav,backward,keep,7,other,2026-11-20T16:04:28
+dataset/backward/617aeb6c_nohash_4.wav,backward,keep,0,,2026-11-24T13:36:10
+dataset/backward/61ab8fbc_nohash_1.wav,backward,keep,7,other,2026-11-20T16:06:11
+dataset/backward/62f05757_nohash_3.wav,backward,keep,0,,2026-11-24T13:36:22
+dataset/backward/6379c6a2_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:07:48
+dataset/backward/63ae15e4_nohash_0.wav,backward,remove,2,cut_end,2026-11-20T11:01:19
+dataset/backward/63ae15e4_nohash_1.wav,backward,remove,2,cut_end,2026-11-20T11:03:09
+dataset/backward/63f7a489_nohash_4.wav,backward,keep,7,near,2026-11-20T13:58:44
+dataset/backward/64a80906_nohash_0.wav,backward,remove,6,partial,2026-11-20T13:53:52
+dataset/backward/64e48f55_nohash_3.wav,backward,keep,7,other,2026-11-20T16:06:13
+dataset/backward/6640fdc0_nohash_1.wav,backward,remove,2,other cut_end short,2026-11-20T11:06:55
+dataset/backward/674ca5ea_nohash_2.wav,backward,remove,5,cut_end,2026-11-24T11:15:47
+dataset/backward/676f8138_nohash_2.wav,backward,keep,7,near,2026-11-24T13:19:28
+dataset/backward/679463fc_nohash_0.wav,backward,keep,7,near,2026-11-24T11:18:43
+dataset/backward/6969e51a_nohash_2.wav,backward,remove,2,near cut_end,2026-11-20T11:07:35
+dataset/backward/69a1a79f_nohash_2.wav,backward,keep,7,other,2026-11-20T16:06:46
+dataset/backward/6fb3d5a7_nohash_0.wav,backward,keep,7,near,2026-11-24T13:17:06
+dataset/backward/70880cc6_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:07:20
+dataset/backward/72242187_nohash_3.wav,backward,keep,7,near,2026-11-24T13:14:43
+dataset/backward/728be664_nohash_0.wav,backward,remove,2,cut_end,2026-11-20T11:07:52
+dataset/backward/728be664_nohash_1.wav,backward,keep,5,cut_end,2026-11-20T13:43:16
+dataset/backward/74241b28_nohash_2.wav,backward,keep,7,near,2026-11-24T13:18:45
+dataset/backward/74241b28_nohash_4.wav,backward,keep,7,near,2026-11-24T11:17:53
+dataset/backward/779de043_nohash_3.wav,backward,keep,7,near,2026-11-24T13:18:51
+dataset/backward/79903546_nohash_1.wav,backward,remove,2,cut_end,2026-11-20T11:02:28
+dataset/backward/7d6b4b10_nohash_2.wav,backward,keep,7,near,2026-11-24T13:18:58
+dataset/backward/7f208e83_nohash_0.wav,backward,keep,3,short,2026-11-24T10:55:37
+dataset/backward/7f208e83_nohash_1.wav,backward,keep,7,other,2026-11-20T16:07:13
+dataset/backward/7f9eb952_nohash_1.wav,backward,keep,7,other,2026-11-20T16:04:26
+dataset/backward/80768fa5_nohash_0.wav,backward,remove,2,other cut_end,2026-11-20T11:03:39
+dataset/backward/80be36a2_nohash_0.wav,backward,remove,2,cut_end,2026-11-20T11:01:35
+dataset/backward/81332c92_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T10:56:14
+dataset/backward/821b64cc_nohash_1.wav,backward,keep,7,near,2026-11-24T13:15:51
+dataset/backward/821b64cc_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T11:15:54
+dataset/backward/833d9f56_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T10:56:59
+dataset/backward/833d9f56_nohash_4.wav,backward,keep,7,other,2026-11-20T16:04:22
+dataset/backward/837a0f64_nohash_2.wav,backward,keep,5,cut_start,2026-11-24T11:14:47
+dataset/backward/85c60942_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:07:54
+dataset/backward/85d2ac4b_nohash_0.wav,backward,remove,1,partial cut_end,2026-11-20T10:47:58
+dataset/backward/8769c34c_nohash_0.wav,backward,keep,7,other,2026-11-20T16:02:49
+dataset/backward/8769c34c_nohash_1.wav,backward,keep,7,other,2026-11-20T16:02:53
+dataset/backward/8769c34c_nohash_2.wav,backward,keep,7,near,2026-11-24T13:18:32
+dataset/backward/8769c34c_nohash_3.wav,backward,keep,7,other,2026-11-20T16:05:02
+dataset/backward/878befa7_nohash_0.wav,backward,remove,2,other cut_end,2026-11-20T11:00:57
+dataset/backward/878befa7_nohash_3.wav,backward,keep,2,cut_end,2026-11-20T16:10:23
+dataset/backward/879a2b38_nohash_0.wav,backward,keep,7,other,2026-11-20T16:05:26
+dataset/backward/879a2b38_nohash_4.wav,backward,keep,6,partial,2026-11-20T13:53:57
+dataset/backward/87d5e978_nohash_3.wav,backward,remove,2,cut_end,2026-11-20T11:08:04
+dataset/backward/88e730cd_nohash_1.wav,backward,keep,3,short,2026-11-20T16:11:14
+dataset/backward/893705bb_nohash_2.wav,backward,remove,2,near cut_end,2026-11-20T11:05:08
+dataset/backward/893705bb_nohash_5.wav,backward,remove,2,cut_end,2026-11-20T11:04:23
+dataset/backward/893705bb_nohash_6.wav,backward,remove,1,partial cut_end,2026-11-20T10:47:02
+dataset/backward/893705bb_nohash_8.wav,backward,remove,2,near cut_end,2026-11-20T11:02:54
+dataset/backward/8b367d88_nohash_0.wav,backward,remove,1,empty cut_end short,2026-11-20T10:45:18
+dataset/backward/8e080ece_nohash_0.wav,backward,remove,6,partial,2026-11-20T13:55:15
+dataset/backward/8ea6dec6_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:03:41
+dataset/backward/8f447c3e_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:01:37
+dataset/backward/91ffb786_nohash_0.wav,backward,keep,7,other,2026-11-20T16:07:39
+dataset/backward/91ffb786_nohash_1.wav,backward,remove,2,other cut_start cut_end,2026-11-20T11:07:40
+dataset/backward/9307154f_nohash_0.wav,backward,remove,2,other cut_end short,2026-11-20T11:04:15
+dataset/backward/9448c397_nohash_0.wav,backward,remove,2,cut_end,2026-11-20T11:04:46
+dataset/backward/9448c397_nohash_1.wav,backward,keep,5,cut_end,2026-11-20T13:43:20
+dataset/backward/9448c397_nohash_2.wav,backward,remove,2,cut_end,2026-11-20T11:07:14
+dataset/backward/94d370bf_nohash_2.wav,backward,keep,7,other,2026-11-20T16:03:57
+dataset/backward/983577be_nohash_0.wav,backward,remove,5,cut_end,2026-11-24T11:13:49
+dataset/backward/98ea0818_nohash_0.wav,backward,keep,7,other,2026-11-20T16:09:39
+dataset/backward/98ea0818_nohash_1.wav,backward,keep,7,other,2026-11-20T16:02:51
+dataset/backward/98ea0818_nohash_2.wav,backward,keep,7,near,2026-11-24T13:18:36
+dataset/backward/98ea0818_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T10:57:36
+dataset/backward/9b02d503_nohash_1.wav,backward,keep,7,other,2026-11-20T16:06:41
+dataset/backward/9b02d503_nohash_2.wav,backward,keep,7,near,2026-11-24T13:16:41
+dataset/backward/9b02d503_nohash_3.wav,backward,keep,7,near,2026-11-24T13:17:47
+dataset/backward/a1e71565_nohash_0.wav,backward,keep,7,near,2026-11-20T13:59:45
+dataset/backward/a2cc5444_nohash_2.wav,backward,remove,5,cut_end,2026-11-24T11:12:55
+dataset/backward/a489191a_nohash_0.wav,backward,keep,7,near,2026-11-24T11:17:49
+dataset/backward/a489191a_nohash_2.wav,backward,keep,7,near,2026-11-24T13:15:38
+dataset/backward/a56859ea_nohash_0.wav,backward,remove,1,partial cut_start cut_end short,2026-11-20T10:46:21
+dataset/backward/a7200079_nohash_2.wav,backward,keep,7,other,2026-11-20T16:04:56
+dataset/backward/a7216980_nohash_2.wav,backward,keep,5,cut_start,2026-11-24T11:15:09
+dataset/backward/a7216980_nohash_4.wav,backward,keep,0,,2026-11-24T13:35:27
+dataset/backward/a929f9b9_nohash_0.wav,backward,keep,7,other,2026-11-20T16:03:53
+dataset/backward/a929f9b9_nohash_4.wav,backward,keep,6,partial,2026-11-20T13:56:30
+dataset/backward/aa80f517_nohash_0.wav,backward,remove,5,cut_end,2026-11-24T11:13:02
+dataset/backward/aa80f517_nohash_2.wav,backward,keep,5,cut_start,2026-11-24T11:12:03
+dataset/backward/aa80f517_nohash_3.wav,backward,keep,7,near,2026-11-24T13:18:10
+dataset/backward/ab46af55_nohash_2.wav,backward,keep,2,cut_end,2026-11-20T11:02:34
+dataset/backward/ab46af55_nohash_3.wav,backward,remove,2,cut_end,2026-11-20T11:03:04
+dataset/backward/acb9db68_nohash_1.wav,backward,remove,1,partial cut_end,2026-11-20T10:45:54
+dataset/backward/ace82a68_nohash_0.wav,backward,remove,5,cut_end,2026-11-20T13:53:28
+dataset/backward/ace82a68_nohash_1.wav,backward,remove,5,cut_end,2026-11-24T11:16:02
+dataset/backward/acfd5b5e_nohash_2.wav,backward,keep,0,,2026-11-24T13:34:04
+dataset/backward/ad526ada_nohash_0.wav,backward,remove,1,partial cut_end short,2026-11-20T10:45:37
+dataset/backward/ae32324a_nohash_0.wav,backward,remove,0,,2026-11-24T13:34:52
+dataset/backward/af6fbbf5_nohash_0.wav,backward,keep,7,near,2026-11-24T11:18:41
+dataset/backward/af6fbbf5_nohash_1.wav,backward,keep,7,near,2026-11-24T11:18:51
+dataset/backward/af790082_nohash_0.wav,backward,keep,7,other,2026-11-20T16:04:46
+dataset/backward/b29f8b23_nohash_0.wav,backward,keep,7,near,2026-11-24T13:19:42
+dataset/backward/b29f8b23_nohash_1.wav,backward,remove,7,other,2026-11-20T16:05:21
+dataset/backward/b29f8b23_nohash_2.wav,backward,keep,5,cut_end,2026-11-24T11:16:04
+dataset/backward/b528edb3_nohash_0.wav,backward,keep,0,,2026-11-24T13:35:22
+dataset/backward/b69fe0e2_nohash_4.wav,backward,remove,3,short,2026-11-24T10:55:30
+dataset/backward/b8874962_nohash_2.wav,backward,keep,7,near,2026-11-20T13:59:33
+dataset/backward/b8874962_nohash_3.wav,backward,keep,7,near,2026-11-20T14:00:20
+dataset/backward/b91b718c_nohash_0.wav,backward,keep,7,near,2026-11-24T11:18:36
+dataset/backward/b91b718c_nohash_1.wav,backward,keep,7,near,2026-11-24T13:19:30
+dataset/backward/b91b718c_nohash_2.wav,backward,keep,7,near,2026-11-24T13:15:40
+dataset/backward/bb6d4301_nohash_3.wav,backward,keep,7,near,2026-11-24T13:19:33
+dataset/backward/bb6d4301_nohash_4.wav,backward,keep,7,near,2026-11-20T13:59:25
+dataset/backward/bd76a7fd_nohash_1.wav,backward,keep,5,cut_end,2026-11-20T13:39:59
+dataset/backward/bd76a7fd_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T10:57:20
+dataset/backward/bd76a7fd_nohash_4.wav,backward,keep,5,cut_end,2026-11-24T11:12:51
+dataset/backward/bd76a7fd_nohash_5.wav,backward,keep,5,cut_end,2026-11-24T11:13:12
+dataset/backward/bd76a7fd_nohash_6.wav,backward,keep,5,cut_end,2026-11-24T11:12:22
+dataset/backward/bde0f20a_nohash_3.wav,backward,keep,5,cut_start,2026-11-24T11:16:17
+dataset/backward/beb458a4_nohash_1.wav,backward,keep,0,,2026-11-24T13:36:59
+dataset/backward/beb458a4_nohash_3.wav,backward,keep,5,cut_end,2026-11-24T11:16:32
+dataset/backward/bfd26d6b_nohash_2.wav,backward,keep,7,near,2026-11-24T13:17:53
+dataset/backward/c0cb43d6_nohash_1.wav,backward,remove,1,partial cut_end,2026-11-20T11:00:49
+dataset/backward/c0e3ff37_nohash_1.wav,backward,remove,1,partial cut_end,2026-11-20T10:46:59
+dataset/backward/c2dccf38_nohash_2.wav,backward,keep,7,other,2026-11-20T16:06:15
+dataset/backward/c351e611_nohash_4.wav,backward,keep,7,near,2026-11-24T13:17:45
+dataset/backward/c4e00ee9_nohash_0.wav,backward,keep,7,other,2026-11-20T14:00:03
+dataset/backward/c50f55b8_nohash_2.wav,backward,keep,2,cut_end,2026-11-20T11:01:55
+dataset/backward/c50f55b8_nohash_4.wav,backward,remove,2,cut_end,2026-11-20T11:03:35
+dataset/backward/c98bbbd3_nohash_2.wav,backward,keep,0,,2026-11-24T13:34:27
+dataset/backward/ca4d5368_nohash_0.wav,backward,keep,7,near,2026-11-24T13:15:42
+dataset/backward/cc3b5b62_nohash_1.wav,backward,keep,5,cut_end,2026-11-20T13:42:37
+dataset/backward/cc8b3228_nohash_0.wav,backward,remove,5,cut_end,2026-11-24T11:12:18
+dataset/backward/cc8b3228_nohash_3.wav,backward,remove,2,cut_end,2026-11-20T11:01:32
+dataset/backward/ce0cb033_nohash_1.wav,backward,keep,0,,2026-11-24T13:34:46
+dataset/backward/ce0cb033_nohash_3.wav,backward,keep,0,,2026-11-24T13:33:58
+dataset/backward/ceef6d96_nohash_3.wav,backward,keep,0,,2026-11-24T13:35:05
+dataset/backward/d070ea86_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T11:15:59
+dataset/backward/d1526c4e_nohash_0.wav,backward,remove,5,cut_end,2026-11-24T10:56:29
+dataset/backward/d1526c4e_nohash_1.wav,backward,remove,0,,2026-11-24T13:34:39
+dataset/backward/d264f7b6_nohash_2.wav,backward,keep,5,cut_end,2026-11-20T13:42:57
+dataset/backward/d394ef8e_nohash_0.wav,backward,keep,5,cut_end,2026-11-24T11:15:39
+dataset/backward/d394ef8e_nohash_2.wav,backward,keep,5,cut_end,2026-11-24T11:12:36
+dataset/backward/d3d8fcd0_nohash_1.wav,backward,remove,3,other short quiet,2026-11-20T13:37:26
+dataset/backward/d4dddb92_nohash_2.wav,backward,keep,7,other,2026-11-20T16:04:51
+dataset/backward/da040491_nohash_4.wav,backward,keep,7,other,2026-11-20T16:07:25
+dataset/backward/db24628d_nohash_0.wav,backward,remove,7,near,2026-11-24T11:18:32
+dataset/backward/ddedba85_nohash_2.wav,backward,remove,2,other cut_end,2026-11-20T11:07:30
+dataset/backward/de3fe344_nohash_2.wav,backward,keep,5,cut_end,2026-11-24T10:55:53
+dataset/backward/e0c782d5_nohash_0.wav,backward,keep,5,cut_end,2026-11-24T10:56:49
+dataset/backward/e11fbc6e_nohash_0.wav,backward,keep,3,short,2026-11-20T13:37:36
+dataset/backward/e11fbc6e_nohash_1.wav,backward,keep,7,near,2026-11-24T13:16:32
+dataset/backward/e4be0cf6_nohash_0.wav,backward,keep,7,near,2026-11-24T13:16:10
+dataset/backward/e6327279_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T10:57:01
+dataset/backward/e6327279_nohash_4.wav,backward,keep,0,,2026-11-24T13:36:20
+dataset/backward/ea0cf37f_nohash_0.wav,backward,remove,1,partial cut_end,2026-11-20T11:00:46
+dataset/backward/ebdd0f59_nohash_0.wav,backward,remove,2,cut_end,2026-11-20T11:03:43
+dataset/backward/ec32860c_nohash_0.wav,backward,remove,1,partial cut_end,2026-11-20T10:46:48
+dataset/backward/ec9b830b_nohash_1.wav,backward,remove,5,cut_end,2026-11-24T11:14:29
+dataset/backward/ee23b031_nohash_0.wav,backward,keep,7,other,2026-11-20T16:08:28
+dataset/backward/ef3367d9_nohash_3.wav,backward,keep,0,,2026-11-24T13:34:12
+dataset/backward/ef3367d9_nohash_5.wav,backward,keep,0,,2026-11-24T13:37:03
+dataset/backward/ef77b778_nohash_0.wav,backward,keep,7,other,2026-11-20T16:06:25
+dataset/backward/ef77b778_nohash_2.wav,backward,keep,7,other,2026-11-20T16:06:44
+dataset/backward/ef77b778_nohash_3.wav,backward,keep,7,near,2026-11-24T13:18:14
+dataset/backward/f035e2ea_nohash_3.wav,backward,keep,7,near,2026-11-24T13:15:23
+dataset/backward/f035e2ea_nohash_4.wav,backward,keep,7,near,2026-11-20T14:00:18
+dataset/backward/f1d8a638_nohash_0.wav,backward,remove,7,other,2026-11-20T16:06:57
+dataset/backward/f1d8a638_nohash_1.wav,backward,keep,7,other,2026-11-20T16:09:26
+dataset/backward/f1d8a638_nohash_2.wav,backward,remove,7,other,2026-11-20T16:04:13
+dataset/backward/f1eaff75_nohash_0.wav,backward,keep,5,cut_start cut_end,2026-11-20T13:53:34
+dataset/backward/f2f0d244_nohash_0.wav,backward,keep,7,other,2026-11-20T16:04:20
+dataset/backward/f2f0d244_nohash_2.wav,backward,keep,6,partial,2026-11-24T11:17:26
+dataset/backward/f5626af6_nohash_2.wav,backward,keep,5,cut_start,2026-11-24T11:14:39
+dataset/backward/f68160c0_nohash_0.wav,backward,keep,5,cut_start,2026-11-20T13:41:59
+dataset/backward/f736ab63_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T10:56:11
+dataset/backward/f736ab63_nohash_2.wav,backward,keep,0,,2026-11-24T13:36:12
+dataset/backward/f736ab63_nohash_3.wav,backward,keep,0,,2026-11-24T13:35:24
+dataset/backward/f798ac78_nohash_0.wav,backward,keep,7,near,2026-11-24T13:14:57
+dataset/backward/fa52ddf6_nohash_0.wav,backward,keep,0,,2026-11-24T13:34:44
+dataset/backward/fa52ddf6_nohash_2.wav,backward,keep,0,,2026-11-24T13:36:57
+dataset/backward/fa57ab3b_nohash_4.wav,backward,remove,5,cut_end,2026-11-24T11:15:07
+dataset/backward/fb7008b0_nohash_0.wav,backward,remove,3,other short,2026-11-20T13:35:55
+dataset/backward/fb7eb481_nohash_1.wav,backward,keep,0,,2026-11-24T13:34:30
+dataset/backward/fbb56351_nohash_2.wav,backward,keep,7,other,2026-11-20T16:09:45
+dataset/backward/fbb56351_nohash_4.wav,backward,keep,7,near,2026-11-24T13:18:17
+dataset/backward/fd5ccd39_nohash_3.wav,backward,keep,0,,2026-11-24T13:36:55
+dataset/backward/fd5ccd39_nohash_4.wav,backward,keep,7,near,2026-11-24T13:15:50
+dataset/backward/fd9c7413_nohash_1.wav,backward,remove,3,short,2026-11-24T10:55:23
+dataset/backward/ff2b842e_nohash_2.wav,backward,keep,7,other,2026-11-20T16:05:05
+dataset/backward/ff4ed4f3_nohash_1.wav,backward,keep,5,cut_end,2026-11-24T10:57:22
+dataset/forward/012187a4_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:43
+dataset/forward/02ade946_nohash_3.wav,forward,keep,7,other,2026-11-20T16:07:00
+dataset/forward/042a8dde_nohash_0.wav,forward,keep,7,near,2026-11-24T13:18:49
+dataset/forward/06f6c194_nohash_4.wav,forward,remove,1,partial cut_end,2026-11-20T11:00:42
+dataset/forward/0a5636ca_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:01:44
+dataset/forward/0d6d7360_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:55:17
+dataset/forward/0d6d7360_nohash_2.wav,forward,keep,6,partial,2026-11-20T13:55:47
+dataset/forward/0d6d7360_nohash_3.wav,forward,keep,6,partial,2026-11-20T13:55:12
+dataset/forward/0e8ec1cb_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:43:09
+dataset/forward/0ea9c8ce_nohash_0.wav,forward,keep,7,other,2026-11-24T13:20:05
+dataset/forward/0f46028a_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:55:40
+dataset/forward/0f46028a_nohash_2.wav,forward,keep,6,partial,2026-11-20T13:56:17
+dataset/forward/0f46028a_nohash_3.wav,forward,keep,6,partial,2026-11-20T13:56:05
+dataset/forward/0f7266cf_nohash_2.wav,forward,keep,0,,2026-11-24T13:33:37
+dataset/forward/13dce503_nohash_0.wav,forward,remove,3,other short,2026-11-20T13:37:24
+dataset/forward/1474273a_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:33
+dataset/forward/14c7b073_nohash_3.wav,forward,keep,7,near,2026-11-24T13:18:01
+dataset/forward/15dd287d_nohash_1.wav,forward,keep,0,,2026-11-24T13:33:52
+dataset/forward/15dd287d_nohash_3.wav,forward,keep,0,,2026-11-24T13:34:18
+dataset/forward/16fce7de_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:29
+dataset/forward/18d84076_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:04:32
+dataset/forward/1970b130_nohash_0.wav,forward,remove,2,other cut_end short,2026-11-20T11:04:18
+dataset/forward/19a10aae_nohash_0.wav,forward,remove,3,other short,2026-11-20T13:36:56
+dataset/forward/1a0f9c63_nohash_0.wav,forward,remove,2,other cut_end short,2026-11-20T11:01:46
+dataset/forward/1b18600d_nohash_0.wav,forward,remove,1,empty short,2026-11-20T10:45:50
+dataset/forward/1b18600d_nohash_1.wav,forward,keep,7,other,2026-11-20T16:08:19
+dataset/forward/1b42b551_nohash_0.wav,forward,keep,0,,2026-11-24T13:36:53
+dataset/forward/1b42b551_nohash_3.wav,forward,keep,0,,2026-11-24T13:33:50
+dataset/forward/1b627376_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T11:14:00
+dataset/forward/1e02ffc5_nohash_4.wav,forward,remove,2,cut_end,2026-11-20T11:07:38
+dataset/forward/1efdf53f_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T11:00:35
+dataset/forward/1f3e4139_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T11:00:31
+dataset/forward/2005ca25_nohash_0.wav,forward,remove,2,other cut_end,2026-11-20T11:08:08
+dataset/forward/211b928a_nohash_1.wav,forward,keep,5,cut_end,2026-11-24T11:16:25
+dataset/forward/226537ab_nohash_3.wav,forward,keep,7,other,2026-11-20T16:09:20
+dataset/forward/234d6a48_nohash_0.wav,forward,keep,0,,2026-11-24T13:33:33
+dataset/forward/234d6a48_nohash_2.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:33
+dataset/forward/2356b88d_nohash_0.wav,forward,keep,7,other,2026-11-20T16:05:03
+dataset/forward/24cab2cb_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:24
+dataset/forward/24cab2cb_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:39
+dataset/forward/262d7a03_nohash_0.wav,forward,remove,3,other cut_end short,2026-11-20T13:36:54
+dataset/forward/265bd13a_nohash_0.wav,forward,remove,2,other cut_start cut_end short,2026-11-20T11:05:11
+dataset/forward/27e6f0f0_nohash_1.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:57
+dataset/forward/29dce108_nohash_1.wav,forward,remove,7,near,2026-11-24T13:15:29
+dataset/forward/29dce108_nohash_2.wav,forward,keep,7,near,2026-11-20T13:56:43
+dataset/forward/2a1f4853_nohash_3.wav,forward,keep,0,,2026-11-24T13:33:41
+dataset/forward/2b5e346d_nohash_2.wav,forward,keep,5,cut_start,2026-11-20T13:41:52
+dataset/forward/2c5e0347_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:04:03
+dataset/forward/2c727642_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T11:00:51
+dataset/forward/2c727642_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:23
+dataset/forward/2d327bc8_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T11:00:27
+dataset/forward/2d327bc8_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:37
+dataset/forward/2e75d37a_nohash_2.wav,forward,keep,5,cut_start,2026-11-24T11:15:36
+dataset/forward/2e75d37a_nohash_4.wav,forward,keep,4,cut_start,2026-11-20T13:39:21
+dataset/forward/2fcb6397_nohash_0.wav,forward,remove,1,partial cut_start cut_end,2026-11-20T10:48:01
+dataset/forward/2fcb6397_nohash_1.wav,forward,remove,1,partial cut_end,2026-11-20T10:43:44
+dataset/forward/2fee065a_nohash_3.wav,forward,keep,6,partial,2026-11-20T13:56:13
+dataset/forward/30060aba_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T10:55:58
+dataset/forward/30060aba_nohash_1.wav,forward,keep,7,other,2026-11-20T16:06:59
+dataset/forward/30276d03_nohash_0.wav,forward,keep,7,near,2026-11-20T13:58:41
+dataset/forward/30276d03_nohash_2.wav,forward,remove,5,near cut_end,2026-11-20T13:42:34
+dataset/forward/30f6e665_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:16
+dataset/forward/3102f006_nohash_3.wav,forward,keep,6,partial,2026-11-20T13:55:23
+dataset/forward/3108acca_nohash_4.wav,forward,keep,0,,2026-11-24T13:34:48
+dataset/forward/31601aad_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:35
+dataset/forward/322d17d3_nohash_3.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:38
+dataset/forward/3250c035_nohash_0.wav,forward,keep,7,near,2026-11-24T13:16:05
+dataset/forward/3291330e_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T11:15:27
+dataset/forward/3291330e_nohash_2.wav,forward,keep,7,other,2026-11-20T16:08:35
+dataset/forward/332d33b1_nohash_0.wav,forward,keep,7,near,2026-11-24T13:14:13
+dataset/forward/332d33b1_nohash_2.wav,forward,keep,6,partial,2026-11-20T13:55:37
+dataset/forward/332d33b1_nohash_3.wav,forward,keep,0,,2026-11-24T13:37:01
+dataset/forward/33fb3f93_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:09
+dataset/forward/3437d72e_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T11:00:29
+dataset/forward/3589bc72_nohash_4.wav,forward,keep,7,near,2026-11-24T13:18:44
+dataset/forward/3837f3f3_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:52
+dataset/forward/39833acb_nohash_1.wav,forward,keep,5,cut_end,2026-11-24T11:12:45
+dataset/forward/39833acb_nohash_2.wav,forward,keep,0,,2026-11-24T13:36:31
+dataset/forward/39afb88e_nohash_0.wav,forward,keep,7,near,2026-11-24T13:17:40
+dataset/forward/3a53b856_nohash_0.wav,forward,keep,0,,2026-11-24T16:11:44
+dataset/forward/3a69f765_nohash_1.wav,forward,keep,5,cut_end,2026-11-24T11:17:07
+dataset/forward/3bb68054_nohash_0.wav,forward,keep,7,other,2026-11-20T16:03:28
+dataset/forward/3bb68054_nohash_1.wav,forward,keep,7,other,2026-11-20T16:04:53
+dataset/forward/3bb68054_nohash_2.wav,forward,keep,7,other,2026-11-20T16:04:39
+dataset/forward/3c4aa5ef_nohash_3.wav,forward,keep,7,near,2026-11-24T13:17:08
+dataset/forward/3c4aa5ef_nohash_4.wav,forward,keep,7,near,2026-11-24T11:18:02
+dataset/forward/3cc595de_nohash_1.wav,forward,keep,7,other,2026-11-20T16:05:00
+dataset/forward/3ce4910e_nohash_1.wav,forward,keep,5,cut_end,2026-11-24T10:56:53
+dataset/forward/3d794813_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:55
+dataset/forward/3d794813_nohash_4.wav,forward,keep,0,,2026-11-24T13:36:33
+dataset/forward/3d9bbe2d_nohash_0.wav,forward,keep,5,cut_start,2026-11-24T11:12:09
+dataset/forward/3e6e5b0f_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:02:23
+dataset/forward/3f45a0cf_nohash_2.wav,forward,keep,7,near,2026-11-24T13:19:38
+dataset/forward/3f45a0cf_nohash_3.wav,forward,keep,7,near,2026-11-24T13:16:36
+dataset/forward/40738a2d_nohash_0.wav,forward,keep,0,,2026-11-24T13:34:50
+dataset/forward/40738a2d_nohash_1.wav,forward,remove,2,cut_end,2026-11-20T11:03:59
+dataset/forward/40738a2d_nohash_3.wav,forward,remove,5,cut_end,2026-11-24T11:14:52
+dataset/forward/40738a2d_nohash_4.wav,forward,keep,7,other,2026-11-20T16:03:34
+dataset/forward/446a3161_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:06:43
+dataset/forward/446a3161_nohash_1.wav,forward,remove,2,cut_end short,2026-11-20T11:05:01
+dataset/forward/4874a7e9_nohash_0.wav,forward,remove,2,other cut_end short,2026-11-20T11:07:57
+dataset/forward/4cee0c60_nohash_0.wav,forward,keep,5,cut_end,2026-11-24T10:56:39
+dataset/forward/4cee0c60_nohash_3.wav,forward,keep,7,near,2026-11-24T13:18:16
+dataset/forward/4e6902d0_nohash_0.wav,forward,keep,6,partial,2026-11-24T11:17:22
+dataset/forward/4e6902d0_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:56:07
+dataset/forward/4e6902d0_nohash_3.wav,forward,keep,6,partial,2026-11-20T13:55:30
+dataset/forward/4e6902d0_nohash_4.wav,forward,keep,6,partial,2026-11-24T11:17:20
+dataset/forward/4e99c1b7_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:31
+dataset/forward/4fce7686_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:30
+dataset/forward/4fd1443e_nohash_2.wav,forward,keep,0,,2026-11-24T13:34:41
+dataset/forward/508e30ee_nohash_0.wav,forward,keep,7,other,2026-11-20T16:09:08
+dataset/forward/513aeddf_nohash_1.wav,forward,remove,7,other,2026-11-20T16:05:26
+dataset/forward/513aeddf_nohash_3.wav,forward,keep,7,other,2026-11-20T16:06:43
+dataset/forward/542f38a2_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T11:14:17
+dataset/forward/54ad8f22_nohash_0.wav,forward,keep,7,other,2026-11-20T16:05:38
+dataset/forward/54aecbd5_nohash_1.wav,forward,keep,7,other,2026-11-20T16:08:33
+dataset/forward/5c43ac9f_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:45:47
+dataset/forward/5cf1ecce_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:55:35
+dataset/forward/5cf1ecce_nohash_3.wav,forward,keep,6,partial,2026-11-24T11:17:15
+dataset/forward/608473c9_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:05:22
+dataset/forward/6124b431_nohash_0.wav,forward,keep,5,cut_end,2026-11-24T11:16:12
+dataset/forward/6124b431_nohash_2.wav,forward,keep,5,cut_end,2026-11-24T11:13:15
+dataset/forward/6124b431_nohash_3.wav,forward,keep,6,partial,2026-11-24T11:17:18
+dataset/forward/619b5164_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:42
+dataset/forward/61ab8fbc_nohash_0.wav,forward,keep,5,cut_end,2026-11-24T11:15:18
+dataset/forward/61e2f74f_nohash_2.wav,forward,keep,6,partial,2026-11-20T13:55:27
+dataset/forward/62b7c848_nohash_0.wav,forward,keep,5,cut_start,2026-11-24T10:57:34
+dataset/forward/62ccd358_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:35
+dataset/forward/6379c6a2_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:52
+dataset/forward/63ae15e4_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:12
+dataset/forward/64a80906_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T10:56:18
+dataset/forward/64df20d8_nohash_2.wav,forward,remove,2,other cut_end,2026-11-20T11:02:01
+dataset/forward/64e48f55_nohash_1.wav,forward,keep,5,cut_end,2026-11-20T13:41:42
+dataset/forward/674ca5ea_nohash_2.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:06
+dataset/forward/679463fc_nohash_0.wav,forward,keep,7,near,2026-11-24T13:15:09
+dataset/forward/679463fc_nohash_1.wav,forward,keep,7,other,2026-11-20T16:05:57
+dataset/forward/6969e51a_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:55:10
+dataset/forward/6969e51a_nohash_3.wav,forward,keep,0,,2026-11-24T13:33:54
+dataset/forward/6969e51a_nohash_4.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:19
+dataset/forward/6aa8def4_nohash_4.wav,forward,remove,5,cut_end,2026-11-24T10:57:30
+dataset/forward/6bf5baf3_nohash_1.wav,forward,keep,0,,2026-11-24T13:34:15
+dataset/forward/6fb3d5a7_nohash_2.wav,forward,keep,6,partial,2026-11-20T13:56:32
+dataset/forward/70880cc6_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:20
+dataset/forward/70b0ccf4_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:03:14
+dataset/forward/7213ed54_nohash_2.wav,forward,remove,2,cut_start cut_end,2026-11-20T11:02:10
+dataset/forward/728be664_nohash_0.wav,forward,keep,0,,2026-11-24T13:36:37
+dataset/forward/728be664_nohash_1.wav,forward,remove,2,near cut_end,2026-11-20T11:06:50
+dataset/forward/72e382bd_nohash_0.wav,forward,keep,0,,2026-11-24T13:34:17
+dataset/forward/7622d95b_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:10
+dataset/forward/779de043_nohash_4.wav,forward,keep,6,partial,2026-11-20T13:55:44
+dataset/forward/79b37d3a_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:47:36
+dataset/forward/7a49163e_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:15
+dataset/forward/7c83c5f6_nohash_2.wav,forward,keep,7,near,2026-11-24T11:18:55
+dataset/forward/7c86c03e_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:25
+dataset/forward/7c86c03e_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:22
+dataset/forward/7f208e83_nohash_0.wav,forward,keep,7,other,2026-11-20T16:03:38
+dataset/forward/7f9eb952_nohash_0.wav,forward,keep,7,near,2026-11-20T13:58:38
+dataset/forward/7f9eb952_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:56:03
+dataset/forward/80768fa5_nohash_0.wav,forward,remove,3,other short quiet,2026-11-20T13:36:17
+dataset/forward/81898f68_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:08
+dataset/forward/821b64cc_nohash_2.wav,forward,keep,7,other,2026-11-20T16:07:15
+dataset/forward/8536c82d_nohash_0.wav,forward,remove,1,empty short quiet,2026-11-20T10:43:17
+dataset/forward/85ac0c1b_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:20
+dataset/forward/8769c34c_nohash_1.wav,forward,keep,7,near,2026-11-24T13:14:47
+dataset/forward/8769c34c_nohash_2.wav,forward,keep,7,near,2026-11-24T13:16:39
+dataset/forward/879a2b38_nohash_0.wav,forward,keep,7,near,2026-11-24T13:17:35
+dataset/forward/879a2b38_nohash_1.wav,forward,keep,0,,2026-11-24T13:34:55
+dataset/forward/88d009d2_nohash_0.wav,forward,remove,3,short quiet,2026-11-24T10:55:39
+dataset/forward/88e85150_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:47:06
+dataset/forward/890cc926_nohash_2.wav,forward,keep,0,,2026-11-24T13:36:14
+dataset/forward/890cc926_nohash_3.wav,forward,keep,0,,2026-11-24T13:33:39
+dataset/forward/893705bb_nohash_3.wav,forward,remove,5,cut_end,2026-11-24T11:14:59
+dataset/forward/893705bb_nohash_5.wav,forward,remove,5,cut_end,2026-11-24T11:14:02
+dataset/forward/893705bb_nohash_7.wav,forward,remove,2,near cut_end,2026-11-20T11:04:20
+dataset/forward/89947bd7_nohash_1.wav,forward,keep,0,,2026-11-24T13:35:07
+dataset/forward/89947bd7_nohash_3.wav,forward,remove,2,cut_end,2026-11-20T11:05:03
+dataset/forward/89947bd7_nohash_4.wav,forward,keep,5,cut_end,2026-11-24T11:16:10
+dataset/forward/8f447c3e_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T11:00:33
+dataset/forward/90645155_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:45
+dataset/forward/90645155_nohash_1.wav,forward,remove,2,other cut_end short,2026-11-20T11:03:54
+dataset/forward/90e72357_nohash_0.wav,forward,keep,6,partial,2026-11-20T13:56:36
+dataset/forward/90e72357_nohash_2.wav,forward,remove,1,partial cut_end,2026-11-20T10:47:26
+dataset/forward/90e72357_nohash_3.wav,forward,remove,5,cut_end,2026-11-24T11:16:56
+dataset/forward/91b03183_nohash_1.wav,forward,remove,5,cut_end,2026-11-24T11:15:56
+dataset/forward/91b03183_nohash_3.wav,forward,keep,5,cut_start,2026-11-24T11:15:30
+dataset/forward/91ffb786_nohash_0.wav,forward,keep,7,other,2026-11-20T16:07:06
+dataset/forward/93cf902e_nohash_0.wav,forward,remove,2,other cut_end short,2026-11-20T11:08:06
+dataset/forward/94403ad3_nohash_1.wav,forward,remove,1,partial cut_end,2026-11-20T11:00:44
+dataset/forward/954f190f_nohash_2.wav,forward,keep,0,,2026-11-24T13:33:35
+dataset/forward/96d8bb6f_nohash_2.wav,forward,keep,7,other,2026-11-20T16:04:16
+dataset/forward/98ea0818_nohash_1.wav,forward,keep,0,,2026-11-24T13:36:18
+dataset/forward/98ea0818_nohash_2.wav,forward,remove,7,other,2026-11-20T13:59:31
+dataset/forward/98ea0818_nohash_3.wav,forward,keep,0,,2026-11-24T13:36:26
+dataset/forward/9b02d503_nohash_0.wav,forward,keep,7,near,2026-11-24T13:15:57
+dataset/forward/9b02d503_nohash_1.wav,forward,keep,7,near,2026-11-20T14:00:16
+dataset/forward/9b02d503_nohash_2.wav,forward,keep,7,near,2026-11-24T13:18:47
+dataset/forward/9c24bc76_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:07:07
+dataset/forward/9fa86a74_nohash_0.wav,forward,remove,2,other cut_end short,2026-11-20T11:02:45
+dataset/forward/a293e285_nohash_0.wav,forward,keep,0,,2026-11-24T13:36:06
+dataset/forward/a293e285_nohash_1.wav,forward,keep,7,near,2026-11-24T13:14:37
+dataset/forward/a2cc5444_nohash_1.wav,forward,remove,5,cut_end,2026-11-24T11:13:00
+dataset/forward/a2cc5444_nohash_2.wav,forward,keep,7,near,2026-11-20T13:59:23
+dataset/forward/a55105d0_nohash_3.wav,forward,keep,7,other,2026-11-20T16:07:17
+dataset/forward/a73be046_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:34
+dataset/forward/a73be046_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:43:49
+dataset/forward/a928cc5b_nohash_0.wav,forward,remove,3,short,2026-11-24T10:55:42
+dataset/forward/a929f9b9_nohash_2.wav,forward,keep,7,other,2026-11-20T16:08:26
+dataset/forward/a929f9b9_nohash_3.wav,forward,keep,7,near,2026-11-24T13:15:59
+dataset/forward/a97c6445_nohash_0.wav,forward,keep,7,other,2026-11-20T16:08:30
+dataset/forward/a9ca1818_nohash_0.wav,forward,keep,7,other,2026-11-20T16:06:21
+dataset/forward/aa80f517_nohash_2.wav,forward,keep,7,other,2026-11-20T16:06:29
+dataset/forward/aa80f517_nohash_3.wav,forward,keep,7,near,2026-11-24T11:18:53
+dataset/forward/ab46af55_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T11:15:03
+dataset/forward/ab46af55_nohash_1.wav,forward,remove,5,cut_end,2026-11-24T10:56:44
+dataset/forward/ab46af55_nohash_2.wav,forward,remove,5,cut_end,2026-11-24T11:13:52
+dataset/forward/ac9dee0e_nohash_1.wav,forward,keep,5,cut_start,2026-11-24T11:14:37
+dataset/forward/acb9db68_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:45:58
+dataset/forward/acfd5b5e_nohash_2.wav,forward,keep,0,,2026-11-24T13:34:58
+dataset/forward/ad526ada_nohash_0.wav,forward,remove,2,other cut_end short,2026-11-20T11:04:25
+dataset/forward/b29f8b23_nohash_3.wav,forward,keep,5,cut_end,2026-11-24T11:13:30
+dataset/forward/b2ae3928_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T11:15:45
+dataset/forward/b2ae3928_nohash_1.wav,forward,keep,5,cut_end,2026-11-24T10:56:32
+dataset/forward/b308773d_nohash_0.wav,forward,keep,5,cut_end,2026-11-24T10:56:55
+dataset/forward/b414c653_nohash_1.wav,forward,remove,0,,2026-11-24T13:36:04
+dataset/forward/b91b718c_nohash_0.wav,forward,keep,7,other,2026-11-20T16:06:37
+dataset/forward/bb05582b_nohash_0.wav,forward,keep,7,near,2026-11-24T13:15:07
+dataset/forward/bb05582b_nohash_4.wav,forward,keep,4,cut_start cut_end,2026-11-20T13:38:26
+dataset/forward/bb6d4301_nohash_2.wav,forward,keep,7,near,2026-11-24T11:18:47
+dataset/forward/bb6d4301_nohash_3.wav,forward,keep,7,near,2026-11-20T13:59:59
+dataset/forward/bbc30633_nohash_1.wav,forward,remove,7,near,2026-11-24T13:19:24
+dataset/forward/bbc30633_nohash_2.wav,forward,keep,5,cut_start,2026-11-24T11:16:22
+dataset/forward/bd76a7fd_nohash_2.wav,forward,remove,5,cut_end,2026-11-24T11:14:54
+dataset/forward/bdd22e4d_nohash_0.wav,forward,keep,7,near,2026-11-24T13:18:08
+dataset/forward/bdd22e4d_nohash_2.wav,forward,keep,7,near,2026-11-24T13:18:52
+dataset/forward/bdd22e4d_nohash_3.wav,forward,keep,7,near,2026-11-24T13:18:06
+dataset/forward/bdd22e4d_nohash_4.wav,forward,keep,7,near,2026-11-24T13:19:20
+dataset/forward/beb458a4_nohash_4.wav,forward,keep,5,cut_end,2026-11-24T10:56:07
+dataset/forward/c0cb43d6_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:14
+dataset/forward/c0e3ff37_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:22
+dataset/forward/c2657ba5_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T11:00:23
+dataset/forward/c2dccf38_nohash_1.wav,forward,keep,7,other,2026-11-20T16:05:59
+dataset/forward/c351e611_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:56:11
+dataset/forward/c351e611_nohash_3.wav,forward,remove,1,partial cut_end,2026-11-20T10:44:04
+dataset/forward/c41d9052_nohash_1.wav,forward,remove,3,partial short,2026-11-20T13:35:48
+dataset/forward/c4e00ee9_nohash_3.wav,forward,keep,7,other,2026-11-20T16:03:18
+dataset/forward/c5a1e46c_nohash_1.wav,forward,keep,7,other,2026-11-24T13:20:03
+dataset/forward/c5a1e46c_nohash_2.wav,forward,keep,7,other,2026-11-20T16:09:32
+dataset/forward/c5a1e46c_nohash_3.wav,forward,keep,0,,2026-11-24T13:34:57
+dataset/forward/c5a1e46c_nohash_4.wav,forward,remove,5,cut_start,2026-11-24T11:16:49
+dataset/forward/c7dc7278_nohash_0.wav,forward,keep,7,near,2026-11-24T11:17:57
+dataset/forward/c7e02d9c_nohash_0.wav,forward,remove,2,cut_end short,2026-11-20T11:02:03
+dataset/forward/c7e02d9c_nohash_1.wav,forward,remove,1,partial cut_end,2026-11-20T10:47:29
+dataset/forward/c7f9ffb5_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:43:25
+dataset/forward/ca4912b6_nohash_2.wav,forward,keep,6,partial,2026-11-20T13:55:25
+dataset/forward/ca4d5368_nohash_0.wav,forward,keep,7,other,2026-11-20T16:04:37
+dataset/forward/ca6d5cd1_nohash_0.wav,forward,remove,2,cut_end,2026-11-20T11:04:30
+dataset/forward/cb72dfb6_nohash_1.wav,forward,keep,7,near,2026-11-24T13:19:44
+dataset/forward/cba7f985_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T11:00:25
+dataset/forward/cc3b5b62_nohash_1.wav,forward,keep,7,near,2026-11-24T11:18:49
+dataset/forward/cc3b5b62_nohash_2.wav,forward,keep,0,,2026-11-24T13:36:24
+dataset/forward/ce0cb033_nohash_1.wav,forward,keep,7,near,2026-11-24T13:14:45
+dataset/forward/ce0cb033_nohash_2.wav,forward,keep,7,near,2026-11-24T13:19:47
+dataset/forward/ceef6d96_nohash_0.wav,forward,keep,5,cut_end,2026-11-24T10:56:35
+dataset/forward/ceef6d96_nohash_2.wav,forward,keep,7,other,2026-11-20T16:04:02
+dataset/forward/cfbedff9_nohash_1.wav,forward,keep,5,cut_start,2026-11-24T10:56:57
+dataset/forward/d1bf406b_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:43:13
+dataset/forward/d264f7b6_nohash_2.wav,forward,keep,7,other,2026-11-20T16:09:42
+dataset/forward/d264f7b6_nohash_3.wav,forward,keep,0,,2026-11-24T13:34:06
+dataset/forward/d3c2470e_nohash_0.wav,forward,keep,0,,2026-11-24T13:35:03
+dataset/forward/d5cdb23e_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:56
+dataset/forward/da27460c_nohash_0.wav,forward,remove,1,empty cut_end short,2026-11-20T10:45:27
+dataset/forward/db24628d_nohash_0.wav,forward,keep,7,other,2026-11-20T16:03:36
+dataset/forward/db24628d_nohash_1.wav,forward,keep,7,other,2026-11-20T16:10:05
+dataset/forward/db24628d_nohash_2.wav,forward,keep,7,other,2026-11-20T16:03:41
+dataset/forward/db9cfc88_nohash_1.wav,forward,remove,5,cut_end,2026-11-24T11:14:05
+dataset/forward/dcb57584_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:43:22
+dataset/forward/dcbfe008_nohash_0.wav,forward,remove,2,other cut_end short,2026-11-20T11:07:18
+dataset/forward/ddedba85_nohash_4.wav,forward,keep,0,,2026-11-24T13:37:19
+dataset/forward/e0c782d5_nohash_3.wav,forward,remove,5,cut_end,2026-11-24T11:15:01
+dataset/forward/e11fbc6e_nohash_1.wav,forward,remove,0,,2026-11-24T13:35:12
+dataset/forward/e3e0f145_nohash_3.wav,forward,keep,6,partial,2026-11-24T11:17:23
+dataset/forward/e49428d9_nohash_4.wav,forward,keep,5,cut_end,2026-11-24T11:12:43
+dataset/forward/e4be0cf6_nohash_1.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:03
+dataset/forward/e4be0cf6_nohash_2.wav,forward,keep,7,other,2026-11-20T16:08:01
+dataset/forward/e71a9381_nohash_0.wav,forward,keep,5,cut_end,2026-11-24T10:55:51
+dataset/forward/e7bcee8a_nohash_1.wav,forward,remove,5,cut_end,2026-11-24T11:13:38
+dataset/forward/e7bcee8a_nohash_2.wav,forward,keep,0,,2026-11-24T13:33:56
+dataset/forward/e7bcee8a_nohash_4.wav,forward,keep,5,cut_end,2026-11-24T10:56:04
+dataset/forward/eaa83485_nohash_0.wav,forward,keep,7,near,2026-11-24T13:15:33
+dataset/forward/eaa83485_nohash_1.wav,forward,keep,7,near,2026-11-24T13:19:35
+dataset/forward/ec989d6d_nohash_0.wav,forward,keep,7,other,2026-11-20T16:09:36
+dataset/forward/ec9b830b_nohash_0.wav,forward,remove,3,cut_end short,2026-11-24T10:55:18
+dataset/forward/ed07d5b7_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:46:07
+dataset/forward/ede2f4ee_nohash_1.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:39
+dataset/forward/ee1d8d49_nohash_1.wav,forward,keep,0,,2026-11-24T13:37:12
+dataset/forward/ee23b031_nohash_1.wav,forward,remove,1,partial cut_end short,2026-11-20T10:43:52
+dataset/forward/eeaf97c3_nohash_2.wav,forward,keep,7,other,2026-11-20T16:03:39
+dataset/forward/eeaf97c3_nohash_3.wav,forward,keep,4,near cut_start cut_end,2026-11-20T13:38:54
+dataset/forward/f01a0d63_nohash_0.wav,forward,keep,7,near,2026-11-24T13:16:30
+dataset/forward/f01a0d63_nohash_1.wav,forward,keep,3,short,2026-11-24T10:55:02
+dataset/forward/f035e2ea_nohash_3.wav,forward,keep,7,other,2026-11-20T16:04:40
+dataset/forward/f0522ff4_nohash_4.wav,forward,keep,7,other,2026-11-20T16:09:07
+dataset/forward/f0659908_nohash_4.wav,forward,keep,6,partial,2026-11-20T13:56:09
+dataset/forward/f19279c4_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:43:47
+dataset/forward/f1d8a638_nohash_0.wav,forward,remove,7,other,2026-11-20T16:03:17
+dataset/forward/f1d8a638_nohash_1.wav,forward,keep,7,other,2026-11-20T16:03:43
+dataset/forward/f1d8a638_nohash_2.wav,forward,keep,7,other,2026-11-20T16:07:19
+dataset/forward/f1d8a638_nohash_3.wav,forward,keep,7,near,2026-11-24T13:17:57
+dataset/forward/f250345e_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:09
+dataset/forward/f2e59fea_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:45:24
+dataset/forward/f2e59fea_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:54:56
+dataset/forward/f2f0d244_nohash_3.wav,forward,keep,7,other,2026-11-20T16:09:28
+dataset/forward/f5626af6_nohash_2.wav,forward,keep,7,extra,2026-11-24T13:18:03
+dataset/forward/f568162b_nohash_0.wav,forward,keep,0,,2026-11-24T13:35:00
+dataset/forward/f5887ca0_nohash_0.wav,forward,remove,1,partial cut_end,2026-11-20T10:46:28
+dataset/forward/f736ab63_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T11:14:35
+dataset/forward/f736ab63_nohash_1.wav,forward,keep,0,,2026-11-24T13:34:00
+dataset/forward/f736ab63_nohash_3.wav,forward,keep,7,other,2026-11-20T16:06:32
+dataset/forward/f9643d42_nohash_0.wav,forward,remove,5,cut_end,2026-11-24T11:15:32
+dataset/forward/f9643d42_nohash_4.wav,forward,remove,5,cut_end,2026-11-24T11:13:43
+dataset/forward/fa52ddf6_nohash_1.wav,forward,keep,5,cut_end,2026-11-24T11:13:25
+dataset/forward/fa70c187_nohash_1.wav,forward,remove,3,short,2026-11-24T10:55:11
+dataset/forward/fb7008b0_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:47:04
+dataset/forward/fb8c31a9_nohash_2.wav,forward,keep,7,other,2026-11-20T16:09:22
+dataset/forward/fbb2f6cc_nohash_2.wav,forward,keep,7,other,2026-11-20T16:06:22
+dataset/forward/fbb56351_nohash_0.wav,forward,keep,7,other,2026-11-20T16:03:59
+dataset/forward/fd5ccd39_nohash_1.wav,forward,keep,6,partial,2026-11-20T13:53:50
+dataset/forward/fe11e258_nohash_0.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:11
+dataset/forward/ff4ed4f3_nohash_3.wav,forward,remove,1,partial cut_end short,2026-11-20T10:45:45
+dataset/stop/004ae714_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:40
+dataset/stop/0135f3f2_nohash_1.wav,stop,keep,7,other,2026-11-20T16:04:49
+dataset/stop/014f9f65_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:07
+dataset/stop/01b4757a_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:55
+dataset/stop/0227998e_nohash_2.wav,stop,remove,4,cut_start,2026-11-20T13:38:01
+dataset/stop/02ade946_nohash_1.wav,stop,keep,5,cut_end,2026-11-24T11:13:08
+dataset/stop/030ec18b_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:30
+dataset/stop/07de53d3_nohash_1.wav,stop,remove,3,short,2026-11-24T10:51:24
+dataset/stop/09a7aa2a_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:46
+dataset/stop/09ddc105_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:51
+dataset/stop/0a5636ca_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:46
+dataset/stop/0b7ee1a0_nohash_1.wav,stop,keep,5,cut_end,2026-11-24T10:57:28
+dataset/stop/0bd689d7_nohash_0.wav,stop,keep,7,near,2026-11-24T13:16:28
+dataset/stop/0bd689d7_nohash_1.wav,stop,keep,7,near,2026-11-24T13:17:49
+dataset/stop/0bfec55f_nohash_0.wav,stop,remove,2,cut_end short,2026-11-20T11:04:49
+dataset/stop/0c09f202_nohash_0.wav,stop,remove,2,other cut_end short,2026-11-20T11:00:53
+dataset/stop/0c40e715_nohash_0.wav,stop,keep,1,empty,2026-11-20T10:47:49
+dataset/stop/0cc6b0b0_nohash_0.wav,stop,remove,1,empty short quiet,2026-11-20T10:45:13
+dataset/stop/0e5193e6_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T10:56:25
+dataset/stop/10ace7eb_nohash_0.wav,stop,keep,7,near,2026-11-24T13:14:55
+dataset/stop/11a022ba_nohash_0.wav,stop,keep,7,near,2026-11-20T13:58:32
+dataset/stop/12c206ea_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:35
+dataset/stop/13a93b33_nohash_0.wav,stop,remove,4,other cut_start,2026-11-20T13:39:39
+dataset/stop/1473be6a_nohash_1.wav,stop,remove,7,other,2026-11-20T16:09:34
+dataset/stop/1496195a_nohash_3.wav,stop,keep,3,short,2026-11-24T10:51:02
+dataset/stop/15c563d7_nohash_0.wav,stop,keep,7,near,2026-11-24T13:19:45
+dataset/stop/161fcca8_nohash_0.wav,stop,keep,7,other,2026-11-20T16:03:55
+dataset/stop/1746d7b6_nohash_0.wav,stop,remove,5,cut_end,2026-11-20T13:41:50
+dataset/stop/179a61b7_nohash_0.wav,stop,keep,2,cut_end,2026-11-20T11:07:04
+dataset/stop/179a61b7_nohash_1.wav,stop,keep,7,near,2026-11-24T11:17:33
+dataset/stop/1816b768_nohash_2.wav,stop,keep,3,short,2026-11-24T10:50:18
+dataset/stop/18d84076_nohash_0.wav,stop,remove,7,other,2026-11-20T13:58:47
+dataset/stop/18f8afd5_nohash_3.wav,stop,keep,3,short,2026-11-24T10:51:15
+dataset/stop/196e84b7_nohash_1.wav,stop,remove,3,short,2026-11-24T10:52:13
+dataset/stop/19a1e5c7_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:08:13
+dataset/stop/19e246ad_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:50
+dataset/stop/1a4259c3_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:37
+dataset/stop/1a673010_nohash_0.wav,stop,keep,4,cut_start,2026-11-20T13:37:52
+dataset/stop/1a73dcd1_nohash_0.wav,stop,remove,2,other cut_end short,2026-11-20T11:04:42
+dataset/stop/1aed7c6d_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:16
+dataset/stop/1b18600d_nohash_0.wav,stop,keep,7,other,2026-11-20T16:03:20
+dataset/stop/1b835b87_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:03
+dataset/stop/1b835b87_nohash_1.wav,stop,keep,3,short,2026-11-24T10:52:26
+dataset/stop/1c1060b1_nohash_0.wav,stop,remove,4,cut_start,2026-11-20T13:38:06
+dataset/stop/1cbcc7a7_nohash_0.wav,stop,remove,3,short,2026-11-24T10:50:26
+dataset/stop/1d919a90_nohash_1.wav,stop,keep,3,short,2026-11-24T10:52:33
+dataset/stop/1dce06e8_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:00
+dataset/stop/1dce06e8_nohash_1.wav,stop,keep,3,short,2026-11-24T10:54:24
+dataset/stop/21e8c417_nohash_0.wav,stop,keep,3,short,2026-11-24T10:52:15
+dataset/stop/21e8c417_nohash_1.wav,stop,keep,3,short,2026-11-24T10:50:14
+dataset/stop/22296dbe_nohash_1.wav,stop,keep,3,short,2026-11-24T10:50:28
+dataset/stop/22296dbe_nohash_2.wav,stop,keep,3,short,2026-11-24T10:51:53
+dataset/stop/2275edbb_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:19
+dataset/stop/24632875_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:58
+dataset/stop/24632875_nohash_1.wav,stop,keep,5,cut_end,2026-11-24T11:16:51
+dataset/stop/24694eb6_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:52
+dataset/stop/256c0a05_nohash_1.wav,stop,keep,3,short,2026-11-24T10:50:42
+dataset/stop/264f471d_nohash_1.wav,stop,keep,7,near,2026-11-24T13:18:42
+dataset/stop/264f471d_nohash_3.wav,stop,keep,7,near,2026-11-24T13:18:12
+dataset/stop/265bd13a_nohash_0.wav,stop,remove,3,other short,2026-11-20T13:35:31
+dataset/stop/26631bee_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:07:22
+dataset/stop/26b28ea7_nohash_0.wav,stop,keep,0,,2026-11-24T16:05:49
+dataset/stop/2748cce7_nohash_0.wav,stop,remove,2,other cut_end short,2026-11-20T11:06:52
+dataset/stop/27c24504_nohash_0.wav,stop,keep,7,near,2026-11-24T13:15:34
+dataset/stop/28612180_nohash_0.wav,stop,keep,3,short,2026-11-20T16:10:39
+dataset/stop/29dce108_nohash_3.wav,stop,keep,3,short,2026-11-24T10:53:23
+dataset/stop/29fb33da_nohash_3.wav,stop,keep,7,other,2026-11-20T16:09:30
+dataset/stop/2a1f4853_nohash_1.wav,stop,keep,7,extra,2026-11-24T13:18:27
+dataset/stop/2a1f4853_nohash_2.wav,stop,keep,0,,2026-11-24T16:13:55
+dataset/stop/2b715941_nohash_0.wav,stop,keep,7,near,2026-11-24T13:15:17
+dataset/stop/2bfe70ef_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:00
+dataset/stop/2cf28b70_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:32
+dataset/stop/2dc4f05d_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:06:39
+dataset/stop/2dce72b3_nohash_0.wav,stop,keep,3,short,2026-11-24T10:52:20
+dataset/stop/2e0d80f7_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:35
+dataset/stop/2e0d80f7_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:40
+dataset/stop/2fa39636_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:20
+dataset/stop/2fa39636_nohash_1.wav,stop,keep,3,short,2026-11-24T10:52:22
+dataset/stop/2fcb6397_nohash_2.wav,stop,keep,5,cut_end,2026-11-24T11:14:56
+dataset/stop/2fee065a_nohash_0.wav,stop,keep,7,near,2026-11-24T13:17:51
+dataset/stop/305776dd_nohash_2.wav,stop,keep,3,short,2026-11-24T10:51:07
+dataset/stop/3102f006_nohash_3.wav,stop,keep,5,cut_end,2026-11-24T10:57:39
+dataset/stop/31db232b_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:13
+dataset/stop/321aba74_nohash_0.wav,stop,keep,7,other,2026-11-20T16:09:10
+dataset/stop/324210dd_nohash_4.wav,stop,remove,5,cut_start cut_end,2026-11-20T13:53:23
+dataset/stop/327289eb_nohash_1.wav,stop,keep,7,near,2026-11-24T13:14:48
+dataset/stop/332d33b1_nohash_4.wav,stop,keep,5,cut_end,2026-11-24T11:16:33
+dataset/stop/33f60c62_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T10:57:32
+dataset/stop/340c8b10_nohash_2.wav,stop,keep,3,short,2026-11-24T10:50:30
+dataset/stop/34d5aa5a_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:04:13
+dataset/stop/3777c08e_nohash_1.wav,stop,remove,3,short,2026-11-24T10:54:44
+dataset/stop/37bd115d_nohash_1.wav,stop,keep,3,short,2026-11-24T10:50:05
+dataset/stop/38c388bc_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:38
+dataset/stop/3a182c98_nohash_0.wav,stop,remove,3,short,2026-11-24T10:54:29
+dataset/stop/3a182c98_nohash_1.wav,stop,keep,3,short,2026-11-24T10:51:11
+dataset/stop/3a53b856_nohash_0.wav,stop,remove,1,empty cut_end,2026-11-20T10:46:13
+dataset/stop/3c1e12cf_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:32
+dataset/stop/3d3ddaf8_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:53
+dataset/stop/3d86b69a_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:59
+dataset/stop/3d86b69a_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:15
+dataset/stop/3d86b69a_nohash_2.wav,stop,remove,5,cut_end,2026-11-20T13:42:18
+dataset/stop/3de53d23_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:08:01
+dataset/stop/3df9a3d4_nohash_0.wav,stop,remove,3,short,2026-11-20T16:10:41
+dataset/stop/3ee0fc39_nohash_0.wav,stop,keep,5,cut_end,2026-11-20T13:43:22
+dataset/stop/3ffa3457_nohash_1.wav,stop,keep,3,short,2026-11-24T10:54:11
+dataset/stop/40738a2d_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:33
+dataset/stop/40738a2d_nohash_1.wav,stop,keep,3,short,2026-11-24T10:54:39
+dataset/stop/41474817_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:19
+dataset/stop/4254621e_nohash_0.wav,stop,remove,5,cut_end,2026-11-24T11:17:05
+dataset/stop/43691f67_nohash_0.wav,stop,keep,0,,2026-11-24T16:14:04
+dataset/stop/46114b4e_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:56
+dataset/stop/46114b4e_nohash_1.wav,stop,keep,3,short,2026-11-24T10:50:43
+dataset/stop/462dca36_nohash_0.wav,stop,remove,3,short,2026-11-20T13:37:10
+dataset/stop/48463cbc_nohash_0.wav,stop,keep,7,near,2026-11-20T13:59:36
+dataset/stop/48a9f771_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T11:14:11
+dataset/stop/4995d875_nohash_2.wav,stop,keep,0,,2026-11-24T16:12:59
+dataset/stop/4b39347d_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:57
+dataset/stop/4c432947_nohash_0.wav,stop,keep,3,short,2026-11-20T13:36:01
+dataset/stop/4c432947_nohash_1.wav,stop,keep,3,short,2026-11-20T16:11:24
+dataset/stop/4d9e07cf_nohash_0.wav,stop,remove,4,cut_start,2026-11-20T13:38:41
+dataset/stop/4e99c1b7_nohash_0.wav,stop,keep,5,cut_end,2026-11-20T13:42:55
+dataset/stop/4e99c1b7_nohash_1.wav,stop,keep,0,,2026-11-24T16:12:42
+dataset/stop/4ec7d027_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:51
+dataset/stop/5104f2f4_nohash_0.wav,stop,remove,2,other cut_end short,2026-11-20T11:08:10
+dataset/stop/51055bda_nohash_2.wav,stop,keep,7,other,2026-11-20T16:07:11
+dataset/stop/513aeddf_nohash_4.wav,stop,keep,7,other,2026-11-20T16:08:39
+dataset/stop/52e228e9_nohash_1.wav,stop,keep,0,,2026-11-24T16:12:17
+dataset/stop/53fd1780_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:57
+dataset/stop/54ad8f22_nohash_3.wav,stop,keep,5,cut_end,2026-11-24T11:15:49
+dataset/stop/54b6d355_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:02:30
+dataset/stop/559bc36a_nohash_1.wav,stop,keep,7,other,2026-11-20T13:58:55
+dataset/stop/55feffd5_nohash_0.wav,stop,remove,3,near short,2026-11-20T13:35:38
+dataset/stop/5628d7b7_nohash_0.wav,stop,keep,2,cut_end,2026-11-20T11:02:58
+dataset/stop/56cd307a_nohash_0.wav,stop,keep,3,short,2026-11-20T16:10:50
+dataset/stop/57b68383_nohash_0.wav,stop,keep,3,short,2026-11-20T16:10:52
+dataset/stop/57de2379_nohash_0.wav,stop,keep,3,short,2026-11-20T16:11:27
+dataset/stop/58df33b5_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:24
+dataset/stop/59b98a22_nohash_0.wav,stop,keep,4,cut_start,2026-11-20T13:39:50
+dataset/stop/5a5721f8_nohash_1.wav,stop,keep,7,near,2026-11-24T11:18:45
+dataset/stop/5b09db89_nohash_1.wav,stop,keep,7,near,2026-11-24T13:14:41
+dataset/stop/5b09db89_nohash_2.wav,stop,keep,7,near,2026-11-24T11:18:00
+dataset/stop/5b09db89_nohash_4.wav,stop,remove,7,other,2026-11-20T16:06:03
+dataset/stop/5cf1ecce_nohash_0.wav,stop,remove,4,cut_start cut_end,2026-11-20T13:38:36
+dataset/stop/5ebc1cda_nohash_0.wav,stop,keep,7,other,2026-11-20T16:10:08
+dataset/stop/5ebc1cda_nohash_1.wav,stop,keep,7,other,2026-11-20T16:06:48
+dataset/stop/5ebc1cda_nohash_2.wav,stop,keep,7,other,2026-11-20T16:03:07
+dataset/stop/5ebc1cda_nohash_3.wav,stop,keep,7,near,2026-11-24T13:18:54
+dataset/stop/5ebc1cda_nohash_5.wav,stop,keep,7,other,2026-11-20T16:09:40
+dataset/stop/5ebc1cda_nohash_6.wav,stop,keep,7,near,2026-11-24T13:14:31
+dataset/stop/5ebc1cda_nohash_7.wav,stop,remove,7,near,2026-11-24T11:17:43
+dataset/stop/5f1253e9_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:07
+dataset/stop/5f5eef60_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T10:56:23
+dataset/stop/5fadb538_nohash_1.wav,stop,keep,3,short,2026-11-24T10:51:00
+dataset/stop/5fadb538_nohash_2.wav,stop,keep,3,short,2026-11-24T10:52:09
+dataset/stop/5fadb538_nohash_3.wav,stop,keep,3,short,2026-11-24T10:52:51
+dataset/stop/5fc3ed24_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:18
+dataset/stop/60472d26_nohash_0.wav,stop,keep,3,short,2026-11-24T10:52:29
+dataset/stop/6094340e_nohash_2.wav,stop,keep,3,cut_end short,2026-11-24T10:55:28
+dataset/stop/611d2b50_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:37
+dataset/stop/616420be_nohash_2.wav,stop,keep,7,near,2026-11-24T13:15:16
+dataset/stop/617de221_nohash_1.wav,stop,keep,5,cut_end,2026-11-20T13:42:39
+dataset/stop/617de221_nohash_2.wav,stop,keep,2,cut_end,2026-11-20T16:10:20
+dataset/stop/617de221_nohash_3.wav,stop,keep,5,cut_end,2026-11-24T10:57:24
+dataset/stop/617de221_nohash_4.wav,stop,keep,2,cut_end,2026-11-20T16:10:15
+dataset/stop/620ff0fa_nohash_1.wav,stop,remove,0,,2026-11-24T16:12:13
+dataset/stop/62605293_nohash_1.wav,stop,keep,3,short,2026-11-20T16:11:01
+dataset/stop/626e323f_nohash_1.wav,stop,keep,0,,2026-11-24T16:12:21
+dataset/stop/6301e683_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:08
+dataset/stop/637c702a_nohash_1.wav,stop,keep,3,short,2026-11-20T16:11:05
+dataset/stop/63f7a489_nohash_0.wav,stop,keep,7,near,2026-11-24T13:17:44
+dataset/stop/64220627_nohash_1.wav,stop,keep,0,,2026-11-24T16:12:15
+dataset/stop/64220627_nohash_2.wav,stop,keep,0,,2026-11-24T16:12:25
+dataset/stop/64a80906_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:07:28
+dataset/stop/6904f0cb_nohash_0.wav,stop,remove,4,other cut_start,2026-11-20T13:39:06
+dataset/stop/69f609ec_nohash_2.wav,stop,remove,4,cut_start,2026-11-20T13:38:44
+dataset/stop/6a2fb9a5_nohash_0.wav,stop,keep,7,near,2026-11-24T13:15:04
+dataset/stop/6ace4fe1_nohash_0.wav,stop,keep,7,extra,2026-11-24T13:13:54
+dataset/stop/6ace4fe1_nohash_2.wav,stop,keep,2,cut_end,2026-11-20T11:03:52
+dataset/stop/6ace4fe1_nohash_3.wav,stop,keep,2,cut_end,2026-11-20T16:10:27
+dataset/stop/6af4aa07_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:02
+dataset/stop/6c88cf25_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:04:38
+dataset/stop/6c9223bd_nohash_0.wav,stop,keep,5,cut_start,2026-11-20T13:53:18
+dataset/stop/6cf5459b_nohash_1.wav,stop,keep,7,near,2026-11-24T11:17:47
+dataset/stop/6d1dcca6_nohash_0.wav,stop,keep,3,short,2026-11-24T10:51:51
+dataset/stop/6dfff95a_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T10:56:16
+dataset/stop/72aa7259_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T11:14:06
+dataset/stop/72aa7259_nohash_2.wav,stop,keep,5,cut_end,2026-11-24T11:14:21
+dataset/stop/74241b28_nohash_1.wav,stop,keep,7,extra,2026-11-24T13:16:34
+dataset/stop/74241b28_nohash_2.wav,stop,keep,7,extra,2026-11-24T13:17:10
+dataset/stop/763188c4_nohash_0.wav,stop,keep,7,other,2026-11-20T16:08:23
+dataset/stop/76b58705_nohash_0.wav,stop,keep,7,near,2026-11-24T13:14:39
+dataset/stop/7799c9cd_nohash_0.wav,stop,keep,0,,2026-11-24T16:05:34
+dataset/stop/7cf14c54_nohash_0.wav,stop,keep,3,short,2026-11-24T10:51:40
+dataset/stop/7cf14c54_nohash_1.wav,stop,keep,3,short,2026-11-24T10:52:07
+dataset/stop/7cf14c54_nohash_3.wav,stop,keep,3,short,2026-11-20T13:36:22
+dataset/stop/7d86b703_nohash_2.wav,stop,remove,0,,2026-11-24T16:12:48
+dataset/stop/7dc50b88_nohash_0.wav,stop,keep,7,other,2026-11-20T16:07:59
+dataset/stop/7f9eb952_nohash_0.wav,stop,keep,7,near,2026-11-24T13:15:02
+dataset/stop/7f9eb952_nohash_1.wav,stop,remove,4,other cut_start,2026-11-20T13:39:03
+dataset/stop/7f9eb952_nohash_2.wav,stop,keep,7,other,2026-11-20T16:05:15
+dataset/stop/7f9eb952_nohash_4.wav,stop,keep,7,near,2026-11-24T11:17:51
+dataset/stop/7fa5fa1f_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T11:17:09
+dataset/stop/7fa5fa1f_nohash_1.wav,stop,keep,5,cut_end,2026-11-24T11:16:08
+dataset/stop/8056e897_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:52
+dataset/stop/8134f43f_nohash_0.wav,stop,keep,6,partial,2026-11-20T13:56:41
+dataset/stop/8134f43f_nohash_1.wav,stop,keep,5,cut_end,2026-11-20T13:42:41
+dataset/stop/821b64cc_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:16
+dataset/stop/821b64cc_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:17
+dataset/stop/821b64cc_nohash_2.wav,stop,keep,3,short,2026-11-24T10:51:55
+dataset/stop/825f450d_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:29
+dataset/stop/825f450d_nohash_2.wav,stop,keep,3,short,2026-11-20T16:10:54
+dataset/stop/8281a2a8_nohash_0.wav,stop,keep,3,short,2026-11-20T16:11:08
+dataset/stop/8281a2a8_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:10
+dataset/stop/8281a2a8_nohash_2.wav,stop,keep,3,short,2026-11-24T10:54:14
+dataset/stop/8281a2a8_nohash_3.wav,stop,keep,3,short,2026-11-20T16:10:59
+dataset/stop/82951cf0_nohash_0.wav,stop,remove,4,cut_start,2026-11-20T13:38:31
+dataset/stop/83957201_nohash_0.wav,stop,remove,4,cut_start cut_end,2026-11-20T13:39:28
+dataset/stop/8536c82d_nohash_0.wav,stop,remove,3,short,2026-11-24T10:50:54
+dataset/stop/85c5eaa0_nohash_1.wav,stop,remove,2,cut_end short,2026-11-20T11:05:17
+dataset/stop/878befa7_nohash_1.wav,stop,keep,2,cut_end,2026-11-20T16:10:13
+dataset/stop/87eff300_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:42
+dataset/stop/88e90bc1_nohash_0.wav,stop,keep,3,short,2026-11-24T10:51:49
+dataset/stop/88f3719f_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:06
+dataset/stop/88f8a99c_nohash_0.wav,stop,keep,3,short,2026-11-20T16:11:20
+dataset/stop/893705bb_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:55
+dataset/stop/893705bb_nohash_16.wav,stop,keep,0,,2026-11-24T16:13:28
+dataset/stop/893705bb_nohash_19.wav,stop,keep,0,,2026-11-24T16:12:50
+dataset/stop/893705bb_nohash_4.wav,stop,keep,0,,2026-11-24T16:14:02
+dataset/stop/8a194ee6_nohash_0.wav,stop,keep,7,near,2026-11-24T11:18:59
+dataset/stop/8a90cf67_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:53
+dataset/stop/8b775397_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:42
+dataset/stop/8c780627_nohash_0.wav,stop,keep,3,short,2026-11-20T13:36:42
+dataset/stop/8dd24423_nohash_0.wav,stop,keep,3,short,2026-11-20T13:35:41
+dataset/stop/8e05039f_nohash_2.wav,stop,keep,3,short,2026-11-24T10:50:35
+dataset/stop/8ea6dec6_nohash_0.wav,stop,remove,2,other cut_end short,2026-11-20T11:07:16
+dataset/stop/8fe52b97_nohash_0.wav,stop,keep,0,,2026-11-24T16:05:32
+dataset/stop/90804775_nohash_0.wav,stop,keep,3,short,2026-11-20T13:36:27
+dataset/stop/90e72357_nohash_0.wav,stop,keep,7,near,2026-11-24T13:14:33
+dataset/stop/90e72357_nohash_1.wav,stop,keep,7,other,2026-11-20T16:08:21
+dataset/stop/90e72357_nohash_2.wav,stop,keep,7,near,2026-11-24T13:17:42
+dataset/stop/91ffb786_nohash_0.wav,stop,keep,3,short,2026-11-20T16:11:17
+dataset/stop/9307154f_nohash_0.wav,stop,remove,3,short,2026-11-20T13:35:36
+dataset/stop/94d370bf_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:59
+dataset/stop/94de6a6a_nohash_3.wav,stop,keep,7,extra,2026-11-24T13:17:59
+dataset/stop/951cac20_nohash_0.wav,stop,keep,7,other,2026-11-20T16:06:34
+dataset/stop/97addd88_nohash_1.wav,stop,keep,5,cut_end,2026-11-24T11:13:40
+dataset/stop/97f493b9_nohash_1.wav,stop,keep,3,short,2026-11-20T13:35:44
+dataset/stop/97f4c236_nohash_4.wav,stop,keep,0,,2026-11-24T16:13:37
+dataset/stop/982babaf_nohash_1.wav,stop,keep,5,cut_end,2026-11-24T11:15:34
+dataset/stop/982babaf_nohash_2.wav,stop,remove,3,cut_start short,2026-11-20T13:36:32
+dataset/stop/9886d8bf_nohash_1.wav,stop,keep,3,short,2026-11-24T10:50:46
+dataset/stop/9886d8bf_nohash_3.wav,stop,keep,3,short,2026-11-20T16:10:44
+dataset/stop/98ea0818_nohash_4.wav,stop,keep,4,cut_start,2026-11-20T13:37:39
+dataset/stop/99e6cab8_nohash_0.wav,stop,remove,4,cut_start,2026-11-20T13:39:46
+dataset/stop/9a76f8c3_nohash_4.wav,stop,keep,0,,2026-11-24T16:13:49
+dataset/stop/9ab86dd0_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T11:14:41
+dataset/stop/9acd0254_nohash_1.wav,stop,keep,7,near,2026-11-24T13:19:40
+dataset/stop/9b02d503_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:25
+dataset/stop/9dc1889e_nohash_1.wav,stop,keep,0,,2026-11-24T16:11:47
+dataset/stop/9e2ce5e3_nohash_0.wav,stop,remove,0,,2026-11-24T16:13:14
+dataset/stop/9e92ef0c_nohash_2.wav,stop,remove,2,cut_end,2026-11-20T11:07:59
+dataset/stop/9e92ef0c_nohash_3.wav,stop,keep,0,,2026-11-24T16:13:33
+dataset/stop/9f22307d_nohash_0.wav,stop,keep,3,short,2026-11-20T16:10:46
+dataset/stop/a2cc5444_nohash_1.wav,stop,keep,3,short,2026-11-24T10:54:48
+dataset/stop/a434d52e_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:33
+dataset/stop/a4383927_nohash_1.wav,stop,remove,5,cut_end,2026-11-20T13:53:12
+dataset/stop/a518d1cf_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:22
+dataset/stop/a518d1cf_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:04
+dataset/stop/a55105d0_nohash_1.wav,stop,keep,3,short,2026-11-24T10:50:21
+dataset/stop/a5a16097_nohash_0.wav,stop,remove,2,near cut_end,2026-11-20T11:05:05
+dataset/stop/a8e25ebb_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:54
+dataset/stop/a8e25ebb_nohash_1.wav,stop,remove,3,short,2026-11-24T10:51:47
+dataset/stop/a902ce9b_nohash_2.wav,stop,remove,2,cut_end,2026-11-20T11:03:46
+dataset/stop/ab5ae445_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:42
+dataset/stop/ab71c9a7_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:12
+dataset/stop/aeb99b1c_nohash_0.wav,stop,remove,2,cut_end short,2026-11-20T11:02:25
+dataset/stop/af6fbbf5_nohash_1.wav,stop,keep,3,short,2026-11-24T10:54:51
+dataset/stop/b00dff7e_nohash_0.wav,stop,keep,5,cut_end,2026-11-20T13:43:18
+dataset/stop/b06c19b0_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:29
+dataset/stop/b089169d_nohash_0.wav,stop,keep,3,other short,2026-11-20T13:35:17
+dataset/stop/b29f8b23_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T11:16:30
+dataset/stop/b414c653_nohash_0.wav,stop,keep,3,other short,2026-11-20T13:37:21
+dataset/stop/b414c653_nohash_4.wav,stop,keep,3,short,2026-11-20T16:10:48
+dataset/stop/b433332a_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:58
+dataset/stop/b44007bc_nohash_0.wav,stop,remove,4,other cut_start,2026-11-20T13:37:43
+dataset/stop/b49caed3_nohash_0.wav,stop,keep,7,near,2026-11-24T11:17:31
+dataset/stop/b4bef564_nohash_1.wav,stop,keep,0,,2026-11-24T16:05:51
+dataset/stop/b69fe0e2_nohash_0.wav,stop,keep,7,other,2026-11-20T16:04:58
+dataset/stop/b72e58c9_nohash_0.wav,stop,keep,7,near,2026-11-20T13:59:18
+dataset/stop/b959cd0c_nohash_0.wav,stop,remove,1,empty cut_start,2026-11-20T10:46:50
+dataset/stop/b959cd0c_nohash_1.wav,stop,remove,7,other,2026-11-20T13:59:41
+dataset/stop/b9f46737_nohash_2.wav,stop,remove,2,cut_start cut_end,2026-11-20T11:02:16
+dataset/stop/bb31b82b_nohash_0.wav,stop,keep,4,cut_start,2026-11-20T13:39:25
+dataset/stop/bbc30633_nohash_0.wav,stop,keep,4,near cut_start,2026-11-20T13:38:49
+dataset/stop/bbc30633_nohash_4.wav,stop,keep,7,other,2026-11-20T16:06:09
+dataset/stop/bd11c654_nohash_1.wav,stop,remove,3,cut_start short,2026-11-20T13:36:50
+dataset/stop/bdd22e4d_nohash_1.wav,stop,keep,7,near,2026-11-24T13:19:49
+dataset/stop/be91a00a_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:23
+dataset/stop/bfb10243_nohash_0.wav,stop,keep,3,short,2026-11-24T10:51:30
+dataset/stop/bfd26d6b_nohash_3.wav,stop,keep,3,short,2026-11-20T16:11:10
+dataset/stop/c1d39ce8_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:31
+dataset/stop/c1d39ce8_nohash_6.wav,stop,keep,3,short,2026-11-24T10:54:56
+dataset/stop/c1e0e8e3_nohash_0.wav,stop,keep,7,other,2026-11-20T16:03:01
+dataset/stop/c1e0e8e3_nohash_1.wav,stop,keep,0,,2026-11-24T16:13:22
+dataset/stop/c2dccf38_nohash_0.wav,stop,keep,7,other,2026-11-20T16:09:16
+dataset/stop/c2dccf38_nohash_1.wav,stop,keep,7,near,2026-11-24T11:18:57
+dataset/stop/c2dccf38_nohash_4.wav,stop,keep,7,other,2026-11-20T16:06:50
+dataset/stop/c2dccf38_nohash_5.wav,stop,keep,7,other,2026-11-20T16:05:54
+dataset/stop/c38720cb_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:49
+dataset/stop/c39703ec_nohash_1.wav,stop,keep,3,short,2026-11-20T16:11:22
+dataset/stop/c5a1e46c_nohash_1.wav,stop,keep,7,other,2026-11-20T16:03:30
+dataset/stop/c661be6e_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:48
+dataset/stop/c661be6e_nohash_2.wav,stop,keep,3,short,2026-11-24T10:51:09
+dataset/stop/c68cf200_nohash_0.wav,stop,keep,4,cut_start,2026-11-20T13:39:30
+dataset/stop/c6a23ff5_nohash_0.wav,stop,keep,3,short,2026-11-24T10:54:49
+dataset/stop/c79159aa_nohash_3.wav,stop,keep,2,cut_end,2026-11-20T11:04:11
+dataset/stop/c93d5e22_nohash_3.wav,stop,keep,3,short,2026-11-24T10:53:12
+dataset/stop/c948d727_nohash_0.wav,stop,remove,7,other,2026-11-20T16:08:09
+dataset/stop/c948d727_nohash_3.wav,stop,remove,4,cut_start,2026-11-20T13:37:50
+dataset/stop/c948d727_nohash_4.wav,stop,keep,4,other cut_start,2026-11-20T13:38:14
+dataset/stop/ca4d5368_nohash_3.wav,stop,keep,0,,2026-11-24T16:13:44
+dataset/stop/cb5d2c6e_nohash_0.wav,stop,keep,3,short,2026-11-20T16:10:35
+dataset/stop/cc3b5b62_nohash_1.wav,stop,keep,7,other,2026-11-20T16:08:37
+dataset/stop/cc8b3228_nohash_3.wav,stop,keep,5,cut_start,2026-11-20T13:39:56
+dataset/stop/ce49cb60_nohash_0.wav,stop,keep,7,near,2026-11-24T13:19:32
+dataset/stop/ce7a8e92_nohash_2.wav,stop,remove,1,empty,2026-11-20T10:47:31
+dataset/stop/d0745d72_nohash_1.wav,stop,remove,2,cut_end,2026-11-20T11:01:24
+dataset/stop/d1dd03ed_nohash_2.wav,stop,keep,3,short,2026-11-24T10:51:25
+dataset/stop/d21fd169_nohash_2.wav,stop,keep,4,cut_start,2026-11-20T13:39:23
+dataset/stop/d264f7b6_nohash_1.wav,stop,keep,7,other,2026-11-20T16:05:14
+dataset/stop/d264f7b6_nohash_2.wav,stop,keep,7,other,2026-11-20T16:03:22
+dataset/stop/d57febf0_nohash_0.wav,stop,keep,7,near,2026-11-24T13:14:51
+dataset/stop/d5dd88da_nohash_0.wav,stop,remove,2,near cut_end,2026-11-20T11:02:14
+dataset/stop/d78858d9_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:07
+dataset/stop/d78858d9_nohash_1.wav,stop,keep,0,,2026-11-24T16:11:49
+dataset/stop/d9b50b8b_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:29
+dataset/stop/d9b8fab2_nohash_0.wav,stop,keep,7,near,2026-11-24T13:18:05
+dataset/stop/da040491_nohash_1.wav,stop,keep,7,near,2026-11-24T11:18:03
+dataset/stop/da27460c_nohash_1.wav,stop,remove,2,near cut_end short,2026-11-20T11:06:59
+dataset/stop/da27460c_nohash_2.wav,stop,remove,2,near cut_end,2026-11-20T11:01:03
+dataset/stop/da7689f1_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:30
+dataset/stop/db79a764_nohash_1.wav,stop,keep,4,cut_start cut_end,2026-11-20T13:39:32
+dataset/stop/db7c95b0_nohash_1.wav,stop,remove,2,cut_end,2026-11-20T11:07:33
+dataset/stop/dc6e9c04_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:38
+dataset/stop/ddedba85_nohash_0.wav,stop,keep,7,near,2026-11-24T13:18:56
+dataset/stop/ddedba85_nohash_1.wav,stop,keep,7,other,2026-11-20T16:07:33
+dataset/stop/ddedba85_nohash_3.wav,stop,keep,7,near,2026-11-24T13:17:38
+dataset/stop/de08912f_nohash_0.wav,stop,remove,4,other cut_start,2026-11-20T13:38:23
+dataset/stop/de41f895_nohash_1.wav,stop,keep,7,near,2026-11-24T13:16:38
+dataset/stop/de89e2ca_nohash_1.wav,stop,keep,3,short,2026-11-20T16:11:03
+dataset/stop/de89e2ca_nohash_2.wav,stop,keep,3,short,2026-11-24T10:50:08
+dataset/stop/de89e2ca_nohash_3.wav,stop,keep,3,short,2026-11-24T10:52:24
+dataset/stop/dea820ce_nohash_0.wav,stop,keep,4,cut_start cut_end,2026-11-20T13:38:29
+dataset/stop/df038de4_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:11
+dataset/stop/e11fbc6e_nohash_0.wav,stop,keep,3,short,2026-11-24T10:50:37
+dataset/stop/e11fbc6e_nohash_1.wav,stop,keep,3,short,2026-11-24T10:53:31
+dataset/stop/e11fbc6e_nohash_2.wav,stop,keep,3,short,2026-11-20T13:36:13
+dataset/stop/e11fbc6e_nohash_3.wav,stop,keep,3,short,2026-11-24T10:53:20
+dataset/stop/e11fbc6e_nohash_4.wav,stop,keep,3,short,2026-11-24T10:52:11
+dataset/stop/e1aa22e4_nohash_0.wav,stop,remove,5,cut_end,2026-11-20T13:43:38
+dataset/stop/e1aa22e4_nohash_1.wav,stop,keep,7,other,2026-11-20T16:09:12
+dataset/stop/e2362167_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:35
+dataset/stop/e2362167_nohash_1.wav,stop,remove,4,cut_start,2026-11-20T13:39:15
+dataset/stop/e2b7d6d6_nohash_2.wav,stop,remove,2,cut_end,2026-11-20T11:04:08
+dataset/stop/e3b64217_nohash_0.wav,stop,keep,0,,2026-11-24T16:12:27
+dataset/stop/e4200516_nohash_0.wav,stop,remove,3,short,2026-11-20T13:35:59
+dataset/stop/e4be0cf6_nohash_0.wav,stop,keep,3,short,2026-11-24T10:51:38
+dataset/stop/e4be0cf6_nohash_1.wav,stop,keep,3,short,2026-11-24T10:54:05
+dataset/stop/e4be0cf6_nohash_2.wav,stop,keep,3,short,2026-11-24T10:53:21
+dataset/stop/e4be0cf6_nohash_3.wav,stop,keep,3,short,2026-11-24T10:54:09
+dataset/stop/e55a2b20_nohash_0.wav,stop,keep,0,,2026-11-24T16:11:34
+dataset/stop/e5afa9b0_nohash_1.wav,stop,keep,3,short,2026-11-20T13:37:15
+dataset/stop/e72aa705_nohash_1.wav,stop,keep,0,,2026-11-24T16:12:40
+dataset/stop/e7bcee8a_nohash_2.wav,stop,keep,3,short,2026-11-24T10:53:45
+dataset/stop/e7bcee8a_nohash_3.wav,stop,keep,2,cut_end short,2026-11-20T11:04:06
+dataset/stop/e8b6f6fe_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T10:56:36
+dataset/stop/ea0cf37f_nohash_2.wav,stop,remove,2,cut_end,2026-11-20T11:06:57
+dataset/stop/ea1f888c_nohash_0.wav,stop,keep,2,cut_end,2026-11-20T16:10:26
+dataset/stop/ea9f8e11_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:39
+dataset/stop/ead2934a_nohash_1.wav,stop,keep,3,short,2026-11-20T13:36:10
+dataset/stop/eb0676ec_nohash_0.wav,stop,keep,2,cut_end,2026-11-20T16:10:18
+dataset/stop/eb67fcbc_nohash_3.wav,stop,keep,5,cut_end,2026-11-24T11:13:13
+dataset/stop/ec32860c_nohash_0.wav,stop,remove,5,cut_end,2026-11-20T13:43:14
+dataset/stop/ec32860c_nohash_1.wav,stop,remove,1,empty cut_start cut_end short,2026-11-20T10:45:42
+dataset/stop/ecef25ba_nohash_1.wav,stop,keep,3,short,2026-11-20T13:35:46
+dataset/stop/ee07dcb9_nohash_0.wav,stop,keep,3,short,2026-11-24T10:52:44
+dataset/stop/ee07dcb9_nohash_2.wav,stop,keep,3,short,2026-11-24T10:53:56
+dataset/stop/eeaf97c3_nohash_0.wav,stop,keep,3,short,2026-11-20T16:11:12
+dataset/stop/eeaf97c3_nohash_3.wav,stop,keep,3,short,2026-11-24T10:53:02
+dataset/stop/efab2cbd_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:02:41
+dataset/stop/efc5e569_nohash_0.wav,stop,remove,2,cut_end,2026-11-20T11:04:40
+dataset/stop/f250345e_nohash_0.wav,stop,remove,7,other,2026-11-20T16:05:12
+dataset/stop/f297e878_nohash_2.wav,stop,keep,5,cut_start,2026-11-20T13:41:54
+dataset/stop/f42e234b_nohash_0.wav,stop,remove,0,,2026-11-24T16:13:20
+dataset/stop/f736ab63_nohash_3.wav,stop,keep,3,short,2026-11-24T10:54:46
+dataset/stop/f816db77_nohash_0.wav,stop,keep,3,short,2026-11-20T13:37:02
+dataset/stop/f8f60f59_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T11:16:28
+dataset/stop/f9af823e_nohash_0.wav,stop,keep,0,,2026-11-24T16:13:26
+dataset/stop/f9bdf10e_nohash_0.wav,stop,keep,7,near,2026-11-20T13:59:06
+dataset/stop/fa44fcf5_nohash_0.wav,stop,keep,3,short,2026-11-24T10:52:49
+dataset/stop/fa52ddf6_nohash_1.wav,stop,keep,0,,2026-11-24T16:14:06
+dataset/stop/fa52ddf6_nohash_4.wav,stop,keep,5,cut_end,2026-11-24T11:14:08
+dataset/stop/fc28c8d8_nohash_0.wav,stop,keep,3,cut_end short,2026-11-24T10:55:26
+dataset/stop/fd32732a_nohash_0.wav,stop,keep,7,near,2026-11-20T13:59:11
+dataset/stop/fdb5155e_nohash_0.wav,stop,remove,2,near cut_end short,2026-11-20T11:03:57
+dataset/stop/fde2dee7_nohash_0.wav,stop,keep,5,cut_end,2026-11-24T10:56:00
+dataset/stop/ff4ed4f3_nohash_0.wav,stop,keep,3,short,2026-11-24T10:53:27
+dataset/stop/ff4ed4f3_nohash_2.wav,stop,keep,5,cut_end,2026-11-24T11:14:19

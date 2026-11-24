@@ -166,8 +166,19 @@ and host-tested but not yet called on target; inference is initialised but not r
   - `download_noise.py`: resumable download of the non-speech noise in `dataset_noise/` (`--dry-run` for sizes)
   - `noise_speech.py`: finds speech in `dataset_noise/` → `speech.npz`: the datasets' own labels (Sounds of Home's PANNs
     labels alone, MUSAN's vocals flag) and YAMNet (MUSAN; DEMAND confident speech only). Re-run after downloads
+  - `check_keyword_clips.py`: flags partial / wrong Speech Commands keyword clips (Whisper large-v3-turbo on the
+    Apple GPU via mlx-whisper, plus clip-edge / length / level energy checks) → `dataset/keyword_check.csv` and a
+    listening file `dataset/keyword_check_spotcheck.wav` (+ Audacity labels). Resumable; `--report-only`
+  - `review_keyword_clips.py`: terminal tool to hear each flagged clip and keep (y) / remove (n) it, likeliest cuts
+    first (shuffled within a tier). Pause / resume, report on pause; hand labels → `keyword_clip_review.csv`
+    (committed). `--report`, `--unsure`, `--sample N` (each tier's first N: a fair sample). `rule_decision()` (fitted to
+    the labels, leans to removing) decides unreviewed clips (keep / remove / check: kept only once heard); `--rule-keeps` reviews the checks, then the keeps.
+    `--unflagged [DB]` reviews unflagged forward / backward clips just past `cut_end`'s limit (saved as tier 0);
+    `--unflagged-groups [N]` samples two more unflagged groups (files under 1 s; stop clips past the limit), also tier 0.
+    `--public [N]` reviews public val keyword clips (up to N random per source + edge cases: is the whole word in the
+    clip?) → `public_clip_review.csv`
 - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, mlflow, numpy, pandas,
-  scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice
+  scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice, mlx-whisper (pulls in torch)
 - Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).
   `HostSW/setup_env.sh` creates it, builds the preprocessing dylib and smoke-tests imports.
   If you add packages, regenerate the pip list from `pip freeze` (drop `pip @ file://...` lines)

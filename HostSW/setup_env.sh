@@ -44,9 +44,10 @@ cd "$HOSTSW_DIR"
 import ctypes, numpy, pandas, sklearn, matplotlib, seaborn, soundfile, sounddevice, serial, optuna, mlflow
 import tensorflow as tf
 from ai_edge_litert.interpreter import Interpreter
+import mlx.core as mx, mlx_whisper   # Whisper on the Apple GPU (check_keyword_clips.py)
 ctypes.CDLL("build/audioproc-build/libAudioPreprocessing.dylib")
 print("python", __import__("sys").version.split()[0], "| tensorflow", tf.__version__,
-      "| GPU devices:", tf.config.list_physical_devices("GPU"))
+      "| GPU devices:", tf.config.list_physical_devices("GPU"), "| MLX device:", mx.default_device())
 print("OK")
 EOF
 
