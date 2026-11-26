@@ -36,6 +36,10 @@ Output: keyword_clip_review.csv in HostSW/ (committed: these are hand labels), o
 file, keyword, decision (keep / remove / unsure), tier (0: unflagged), flags, reviewed (time).
 --public's go in public_clip_review.csv instead, so it can run alongside a review of the others.
 
+--write-exclusions writes dataset_exclusions.csv (committed): the Speech Commands keyword clips that the training
+notebook leaves out. Those are the clips marked remove or unsure, and the flagged clips not heard that the rule
+doesn't keep (a 'check' not heard is removed). Unflagged clips not reviewed are kept.
+
 Usage (from HostSW/):
     python EvalScripts/review_keyword_clips.py            # review, carrying on where you stopped
     python EvalScripts/review_keyword_clips.py --report   # just the report
@@ -47,6 +51,7 @@ Usage (from HostSW/):
                                                            # (add --report or --unsure for just those clips)
     python EvalScripts/review_keyword_clips.py --unflagged-groups [N]  # N random clips of each of the two groups
                                                            # (a larger N carries on; --report / --unsure too)
+    python EvalScripts/review_keyword_clips.py --write-exclusions   # dataset_exclusions.csv, from the labels + the rule
     python EvalScripts/review_keyword_clips.py --public [N]  # up to N random public val keyword clips per source
                                                            # + the edge cases (--report / --unsure too)
 """
@@ -69,6 +74,8 @@ import check_keyword_clips as ck
 
 REVIEW_PATH = ck.HOSTSW_DIR / "keyword_clip_review.csv"
 PUBLIC_REVIEW_PATH = ck.HOSTSW_DIR / "public_clip_review.csv"
+EXCLUSIONS_PATH = ck.HOSTSW_DIR / "dataset_exclusions.csv"
+EXCLUSION_FIELDS = ["file", "label", "reason"]
 REVIEW_FIELDS = ["file", "keyword", "decision", "tier", "flags", "reviewed"]
 PUBLIC_REVIEW_FIELDS = ["file", "keyword", "decision", "source", "reviewed"]
 DECISION_KEYS = {"y": "keep", "n": "remove", "u": "unsure"}
@@ -288,6 +295,39 @@ def compact_review(path):
         writer.writeheader()
         writer.writerows(sorted(latest.values(), key=lambda r: r["file"]))
     tmp.replace(path)
+
+
+def exclusions(clips):
+    """The clips to leave out of training, by file: file, label (keyword) and reason ('reviewed: <decision>' for
+    hand labels, 'rule: tier <n>' for flagged clips nobody heard)."""
+    latest = read_review(REVIEW_PATH)
+    flagged = {r["file"]: r for r in load_flagged()}
+    rows = []
+    for r in clips:
+        decision = latest.get(r["file"], {}).get("decision")
+        if decision in ("remove", "unsure"):
+            reason = f"reviewed: {decision}"
+        elif decision is None and r["file"] in flagged and rule_decision(flagged[r["file"]]) != "keep":
+            reason = f"rule: tier {flagged[r['file']]['tier']}"
+        else:
+            continue
+        rows.append({"file": r["file"], "label": r["keyword"], "reason": reason})
+    return sorted(rows, key=lambda r: r["file"])
+
+
+def write_exclusions(path):
+    clips = load_clips()
+    rows = exclusions(clips)
+    with open(path, "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=EXCLUSION_FIELDS)
+        writer.writeheader()
+        writer.writerows(rows)
+    total = Counter(r["keyword"] for r in clips)
+    print(f"Wrote {len(rows)} excluded clips to {ck.rel(path)}")
+    for kw in ck.KEYWORDS:
+        n = sum(r["label"] == kw for r in rows)
+        print(f"  {kw:10s} {n:5d} of {total[kw]:5d} ({100 * n / total[kw]:.0f}%), {total[kw] - n} left")
+    print("  " + ", ".join(f"{k} {v}" for k, v in sorted(Counter(r["reason"] for r in rows).items())))
 
 
 # --- Screen and sound --------------------------------------------------------
@@ -626,7 +666,12 @@ def main():
     parser.add_argument("--public", type=int, nargs="?", const=PUBLIC_SAMPLE, metavar="N",
                         help=f"review up to N random public val keyword clips per source (default {PUBLIC_SAMPLE}) and "
                              "the edge cases; --report / --unsure then cover just those")
+    parser.add_argument("--write-exclusions", action="store_true",
+                        help=f"write {EXCLUSIONS_PATH.name}: the clips the training notebook leaves out")
     args = parser.parse_args()
+    if args.write_exclusions:
+        write_exclusions(EXCLUSIONS_PATH)
+        return
     if args.public is not None and (args.sample or args.rule_keeps or args.unflagged is not None or args.public < 1):
         parser.error("--public needs N >= 1 and can't be combined with --sample, --rule-keeps or --unflagged")
     if args.unflagged is not None and (args.sample or args.rule_keeps):

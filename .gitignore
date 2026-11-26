@@ -92,3 +92,6 @@ __pycache__/
 # Training checkpoints: keep best.keras only
 HostSW/checkpoints/**/model_epoch*.keras
 HostSW/checkpoints/**/latest.keras
+
+# Feature sets for STM32Cube AI Studio validation, rebuilt by TrainModel.ipynb every run
+HostSW/TestDatasetST/*.npz

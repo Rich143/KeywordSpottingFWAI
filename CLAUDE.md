@@ -96,13 +96,15 @@ and host-tested but not yet called on target; inference is initialised but not r
   into `Test/support/`
 - **On-target audio check**: flash, run `python HostSW/receive_and_play.py <serial-port>`
   (e.g. `/dev/tty.usbmodem2021303`), listen
-- **Model validation**: STM32Cube AI Studio validate using `HostSW/TestDatasetST/*.npz`
+- **Model validation**: STM32Cube AI Studio validate using `HostSW/TestDatasetST/*.npz` (from v11 the notebook writes the val
+  clips, `val_ds*.npz`: the test clips are held back)
 - **Model on long audio** (host, sliding window, scripts in `HostSW/EvalScripts/`): `make_test_wav.py -o t.wav` (or a board capture via
   `receive_and_play.py -o`) → `run_model_on_wav.py -m tflite_models/<model>.tflite -w t.wav` →
   `view_results.py -w t.wav`
 - **Eval splits**: both eval sets have `val/` (compare models, make decisions; scored every training run) and
   `test/` (held back: only scored when asked for by name, `--split test` / `RUN_TEST_EVAL = True` in the notebook;
-  look rarely, never tune on it). Never suggest tuning on, or routinely reporting, test results
+  look rarely, never tune on it). In the notebook that covers the test clips too (Speech Commands test + public test
+  clips): per-run metrics and plots use val. Never suggest tuning on, or routinely reporting, test results
 - **Board eval set** (`HostSW/eval_recordings/{val,test}/`, held out, never train on it; see its README; test is
   empty until new recordings are made): record with
   `receive_and_play.py -o`, label keywords (+ `ignore`) in Audacity → `audacity_labels_to_truth.py` →
@@ -114,7 +116,8 @@ and host-tested but not yet called on target; inference is initialised but not r
   level), and 1 s keyword / `other` / `_background_noise_` clips. Built by `make_public_eval.py` from `dataset_public/` and
   `dataset_noise/`; WAVs are gitignored (rebuild, deterministic). Speakers and noise groups (artist, recorder, environment,
   home) are split 50/25/25 train/val/test in `splits.csv`: only `split = train` groups may ever be trained on. Noise groups
-  keep their split once assigned
+  keep their split once assigned. `train/` is built the same way, but only for the notebook's training clips: it's never
+  scored (`snapshot_eval.py` refuses it). A split's index seeds its picks: add new splits at the end of `SPLITS`
 - **Scoring** (`snapshot_eval.py -v <ver> -m <model> --dataset board|public --split val|test --jobs 6`): sliding-window
   recall + false accepts/hour over a split → one summary row in `<split dir>/eval_history.csv` (board: one per run;
   public: one per model version, with per-source columns and false accepts/hour on speech and on noise apart:
@@ -130,7 +133,7 @@ and host-tested but not yet called on target; inference is initialised but not r
 ## Host Software (`HostSW/`)
 - Notebooks are in `Notebooks/`, eval scripts in `EvalScripts/`. Both use paths relative to `HostSW/`:
   the notebooks' first cell `chdir`s there; run the scripts from `HostSW/` (`python EvalScripts/<script>.py`).
-- `TrainModel.ipynb` (current, v7): Google Speech Commands v0.02 → features → CNN → int8 PTQ →
+- `TrainModel.ipynb` (current, v11): Google Speech Commands v0.02 + board + public clips → features → CNN → int8 PTQ →
   `tflite_models/`. It computes features by calling the **same C preprocessing library** via ctypes
   (`HostSW/build/.../libAudioPreprocessing.dylib`, built from `HostSW/CMakeLists.txt`), so training
   features match the firmware. `MODEL_VERSION` (first cell) names the checkpoint/log dirs, tflite files
@@ -142,11 +145,13 @@ and host-tested but not yet called on target; inference is initialised but not r
 - Datasets: `dataset/` = Speech Commands (downloaded, gitignored; `_background_noise_split_/` is derived
   and rebuilt by the notebook). `dataset_board/` = our board-mic training recordings (Git LFS, see its
   README); its `_background_noise_/` long recordings are split into the background class. `dataset_public/` =
-  LibriSpeech, its MFA alignments, AMI and Spoken Wikipedia (gitignored), only used for the public eval set so far.
+  LibriSpeech, its MFA alignments, AMI and Spoken Wikipedia (gitignored), used for the public eval set, whose 1 s clips the
+  notebook adds to its train / val / test splits of the same name (`USE_PUBLIC_CLIPS`).
   `dataset_noise/` = background noise from MUSAN (noise + music, vocals flagged), DEMAND and Sounds of Home (gitignored,
   `download_noise.py`; `manifest.csv` with a split `group` per file: artist / recorder / file / environment / home), and
-  where its speech is (`speech.npz`, `noise_speech.py`). Used by the public eval set; not in training yet (use only
-  `split = train` groups, speech-free audio). Synthetic coloured noise is capped at `SYNTHETIC_NOISE_SECONDS` per colour
+  where its speech is (`speech.npz`, `noise_speech.py`). Used by the public eval set and its clips (training only gets
+  `split = train` groups, speech-free audio). `dataset_exclusions.csv` (committed) lists the Speech Commands keyword clips
+  left out of training: cut off or wrong, from `review_keyword_clips.py --write-exclusions`. Synthetic coloured noise is capped at `SYNTHETIC_NOISE_SECONDS` per colour
 - `receive_and_play.py`: UART audio receiver and playback (pyserial, sounddevice, numpy)
 - `EvalScripts/`:
   - `run_model_on_wav.py`: sliding 1 s window over a WAV → C preprocessing dylib → quantise → tflite →
@@ -159,8 +164,9 @@ and host-tested but not yet called on target; inference is initialised but not r
   - `eval_wav.py`: run model → score → view on one WAV
   - `snapshot_eval.py`: scores a model on one split of the board or public eval set → that split's `eval_history.csv` + MLflow
   - `eval_tracking.py`: MLflow store / experiment setup shared with the notebook, standalone eval runs
-  - `make_public_eval.py`: splits speakers / noise groups and builds `eval_recordings_public/{val,test}/` from
-    `dataset_public/` and `dataset_noise/` (`--stats` for keyword counts and usable noise hours, `--check` to verify a build)
+  - `make_public_eval.py`: splits speakers / noise groups and builds `eval_recordings_public/{val,test,train}/` from
+    `dataset_public/` and `dataset_noise/` (`--stats` for keyword counts and usable noise hours, `--check` to verify a build,
+    `--splits train` for one split, `--clips-only` to re-cut the clips without touching the recordings)
   - `download_ami.py`: resumable AMI audio download from the AMI site's wget script (Mix-Headset only by default;
     `--channels` picks other recordings). Its downloader is shared, and can fetch a byte range (one member of a remote zip)
   - `download_noise.py`: resumable download of the non-speech noise in `dataset_noise/` (`--dry-run` for sizes)
@@ -176,7 +182,7 @@ and host-tested but not yet called on target; inference is initialised but not r
     `--unflagged [DB]` reviews unflagged forward / backward clips just past `cut_end`'s limit (saved as tier 0);
     `--unflagged-groups [N]` samples two more unflagged groups (files under 1 s; stop clips past the limit), also tier 0.
     `--public [N]` reviews public val keyword clips (up to N random per source + edge cases: is the whole word in the
-    clip?) → `public_clip_review.csv`
+    clip?) → `public_clip_review.csv`. `--write-exclusions` writes `dataset_exclusions.csv` from the labels and the rule
 - Main deps: tensorflow, tensorflow-io, ai-edge-litert, optuna, mlflow, numpy, pandas,
   scikit-learn, matplotlib, seaborn, soundfile, pyserial, sounddevice, mlx-whisper (pulls in torch)
 - Uses conda env "kws", pinned in `HostSW/environment.yml` (Python 3.10 from conda, all else pip).

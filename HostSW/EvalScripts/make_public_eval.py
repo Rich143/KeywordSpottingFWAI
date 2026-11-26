@@ -84,13 +84,14 @@ greedily biggest group first. Groups:
                recorder, Free Sound noise by file, a DEMAND environment, a Sounds of Home home.
                Balanced on usable (speech-free) hours and group count. A noise group keeps the
                split it has in splits.csv, so downloading more audio never moves a group
-Train is reserved for training (not built here); val and test are each built as above.
+Val and test are eval splits. Train is built the same way for training (its clips go into the
+notebook's training split), and is never scored: snapshot_eval.py only accepts val and test.
 
 Outputs in --out (default eval_recordings_public/):
   splits.csv            one row per group: source, group, split, members (the speakers /
                         readers / meetings in it; a noise group's own name), items, keyword
                         counts. Only groups with split = train may ever be trained on
-  <split>/              val/ and test/, each with:
+  <split>/              val/, test/ and train/, each with:
     <stem>.wav          16 kHz, 16-bit mono (gitignored: rebuild instead)
     <stem>_truth.csv    start_s, end_s, label, file   (file = source utterance / excerpt id)
     manifest.csv        one row per piece: where it is in which WAV, and where it came from
@@ -129,6 +130,7 @@ Usage (from HostSW/):
     python EvalScripts/make_public_eval.py --stats
     python EvalScripts/make_public_eval.py
     python EvalScripts/make_public_eval.py --check
+    python EvalScripts/make_public_eval.py --clips-only     # re-cut the clips from the WAVs as built
     python EvalScripts/make_public_eval.py --splits val --sources ls --ls-negative-min 60
     python EvalScripts/make_public_eval.py --sources soh --noise-min 2400
 """
@@ -198,9 +200,10 @@ DEFAULT_NOISE_MIN = 2100
 # Speaker-group split. Every group (LibriSpeech speaker, SWC reader, AMI meetings linked by a
 # shared participant) goes to one split, so no speaker is in two. Groups are assigned greedily,
 # biggest first, each to the split that keeps every keyword's share and the share of items
-# (utterances / recordings) closest to SPLIT_FRACTIONS. Train is reserved for training and
-# not built here; val and test are built into <out>/val and <out>/test.
-SPLITS = ["val", "test"]
+# (utterances / recordings) closest to SPLIT_FRACTIONS. Each is built into <out>/<split>.
+# A split's index seeds its random generators, so new splits go at the end: train first would
+# change val and test
+SPLITS = ["val", "test", "train"]
 SPLIT_FRACTIONS = {"train": 0.5, "val": 0.25, "test": 0.25}
 SPLITS_CSV = "splits.csv"
 
@@ -224,7 +227,7 @@ CLIPS_OTHER_PER_KEYWORD = 2
 CLIP_OTHER_MIN_REL_DB = -15.0
 OTHER_LABEL = "other"
 # Background clips: random 1 s windows of the noise pieces, chosen in proportion to their length
-CLIPS_BACKGROUND_PER_KEYWORD = 1
+CLIPS_BACKGROUND_PER_KEYWORD = 2
 BACKGROUND_LABEL = "_background_noise_"
 CLIP_LABELS = KEYWORDS + [OTHER_LABEL, BACKGROUND_LABEL]
 CLIP_FIELDS = ["file", "label", "wav", "start_s", "end_s", "piece_id", "source", "span_start_s", "span_end_s"]
@@ -1926,10 +1929,13 @@ def parse_args():
     parser.add_argument("--stats", action="store_true", help="only print keyword counts per split / source")
     parser.add_argument("--check", action="store_true",
                         help="only check the existing build in --out (a build always checks itself too)")
+    parser.add_argument("--clips-only", action="store_true",
+                        help="only re-cut the clips from the existing WAVs (the recordings aren't touched), "
+                             "after a change to the clip settings")
     parser.add_argument("--sources", nargs="+", choices=SOURCES, default=SOURCES,
                         help=f"sources to build (default: {' '.join(SOURCES)})")
     parser.add_argument("--splits", nargs="+", choices=SPLITS, default=SPLITS,
-                        help="splits to build / check (default: val test)")
+                        help=f"splits to build / check (default: {' '.join(SPLITS)})")
     parser.add_argument("--max-per-keyword", type=int,
                         help="limit on occurrences of a keyword per source and split (default: no limit)")
     parser.add_argument("--max-per-speaker", type=int,
@@ -1965,6 +1971,12 @@ def main():
         if not dirs:
             sys.exit(f"no built splits in {args.out}")
         sys.exit(1 if sum(check_build(d, args.noise_dir) for d in dirs) else 0)
+
+    if args.clips_only:
+        dirs = [args.out / split for split in args.splits if (args.out / split).is_dir()]
+        if not dirs:
+            sys.exit(f"no built splits in {args.out}")
+        sys.exit(1 if sum(recut_clips(d, args) for d in dirs) else 0)
 
     args.out.mkdir(parents=True, exist_ok=True)
     data, assignments = {}, {}
@@ -2036,6 +2048,20 @@ def main():
         update_build_info(out_dir, args, built)
         errors += check_build(out_dir, args.noise_dir)
     sys.exit(1 if errors else 0)
+
+
+def recut_clips(out_dir, args):
+    """Cuts a built split's clips again (write_clips) without touching its recordings, which must still
+    match build_info.json. Returns the number of check errors."""
+    print(f"\n[{out_dir.name}] Re-cutting the clips...")
+    recorded = read_build_info(out_dir)["files"]
+    files = [p for p in output_files(out_dir) if p.name != "clips.csv"]
+    changed = [p.name for p in files if recorded.get(p.name) != file_sha256(p)]
+    if changed or not files:
+        sys.exit(f"{out_dir}: {len(changed)} files don't match {BUILD_INFO_NAME} (e.g. {changed[:3]}): rebuild instead")
+    write_clips(out_dir, np.random.default_rng([args.seed, CLIPS_RNG_KEY, SPLITS.index(out_dir.name)]))
+    update_build_info(out_dir, args, [])
+    return check_build(out_dir, args.noise_dir)
 
 
 def write_manifest(out_dir, rows, built_sources):

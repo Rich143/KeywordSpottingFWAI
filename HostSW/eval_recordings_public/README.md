@@ -45,12 +45,14 @@ downloading more audio never moves one.
 
 | Split | Used for |
 |---|---|
-| **train** | reserved for training on public data (a later step). Nothing is built from it here. **Only groups with `split = train` in `splits.csv` may ever be trained on.** |
+| **train** (`train/`) | training: its 1 s clips go into the notebook's train split. Built like the others (its WAVs make the clips reproducible), but **never scored**: `snapshot_eval.py` only accepts val and test. **Only groups with `split = train` in `splits.csv` may ever be trained on.** |
 | **val** (`val/`) | comparing models and making decisions: the notebook scores it every run |
 | **test** (`test/`) | held back. It's only scored when asked for by name (`--split test`, or `RUN_TEST_EVAL = True` in the notebook). Look at it rarely, e.g. once per finished model, and never tune on it |
 
-`val/` and `test/` each contain the full-length recordings and 1 s clips cut from them (`clips/`).
-The clips are for clip-level evaluation and training later:
+`val/`, `test/` and `train/` each contain the full-length recordings and 1 s clips cut from them (`clips/`).
+The notebook adds the clips to its splits of the same name: train clips to training, val clips to its
+per-epoch validation and per-run metrics, and test clips to the held-back test (only used with
+`RUN_TEST_EVAL = True`):
 - **Keyword clips:** one per keyword span of up to 0.7 s, centred on the word. Word timings can be
   off by a few hundred ms, and centring leaves the most room for that on both sides (about 280 ms
   for a typical word). There's no random offset; timing errors already give some variation, and
@@ -66,11 +68,14 @@ The clips are for clip-level evaluation and training later:
     `ignore` span.
 - **`other` clips:** twice as many, as random 1 s windows of speech that overlap no keyword or
   `ignore` span.
-- **`_background_noise_` clips** (the model's background class): as many as keyword clips, as
+- **`_background_noise_` clips** (the model's background class): twice as many as keyword clips, as
   random 1 s windows of the noise pieces, picked in proportion to their length.
 - **The word barely stands out in keyword clips.** It's only ~1–3 dB above the rest of its window,
   because the neighbouring words are in it too. That makes them much harder than Speech Commands'
   isolated words.
+- **Checked by ear** (Nov 2026, `review_keyword_clips.py --public`, val only): of 138 clips (32 per source at
+  random, plus the shifted, longest, shortest and quietest words), 1 didn't contain the whole keyword: a
+  LibriSpeech "forward" aligned to 0.23 s. It's still in the val clips.
 
 ## Background noise
 
@@ -209,10 +214,12 @@ dataset_public/
 From `HostSW/`:
 ```
 python EvalScripts/make_public_eval.py --stats      # keyword counts per source and split, writes nothing
-python EvalScripts/make_public_eval.py              # split, then build val/ and test/ (a source without data is skipped)
+python EvalScripts/make_public_eval.py              # split, then build val/, test/ and train/ (a source without data is skipped)
+python EvalScripts/make_public_eval.py --splits train   # build one split; the others' files are kept
+python EvalScripts/make_public_eval.py --clips-only     # re-cut the clips from the WAVs as built, after changing the clip settings
 python EvalScripts/make_public_eval.py --sources ami   # re-split and rebuild one source; the others' files are kept
 python EvalScripts/make_public_eval.py --sources soh   # e.g. after downloading more Sounds of Home hours
-python EvalScripts/make_public_eval.py --check      # check both splits
+python EvalScripts/make_public_eval.py --check      # check every built split
 ```
 
 | Option | Default | Effect |
@@ -296,8 +303,17 @@ random offset, and taken round-robin over meetings / readers / hours until there
 | test | MUSAN | 57 | 372 | | 176 | | | |
 | test | DEMAND | 2 | 12 | | 3 | | | |
 | test | Sounds of Home | 344 | 1,737 | | 2 | | | |
+| train | LibriSpeech | 263 | 1,352 | 347 | 1,130 | 914 | 163 | 599 |
+| train | AMI | 80 | 415 | 24 | 94 | 30 | 7 | 40 |
+| train | SWC | 122 | 629 | 43 | 148 | 50 | 15 | 69 |
+| train | MUSAN | 190 | 1,231 | | 314 | | | |
+| train | DEMAND | 6 | 28 | | 6 | | | |
+| train | Sounds of Home | 170 | 858 | | 3 | | | |
 
-Each split has 36.1 h of speech and 35.3 h of noise (see [Background noise](#background-noise)).
+Val and test each have 36.1 h of speech and 35.3 h of noise (see [Background noise](#background-noise));
+train has 39.9 h and 35.3 h (more keywords, so more keyword pieces). Train gets more MUSAN music (all of
+MUSAN's Kevin MacLeod folder is in train) and less Sounds of Home than val and test: the train homes have only
+8 h per mic downloaded.
 The size is set by the false accept rates it needs to measure: 35 h gives about 35 events at 1
 false accept per hour, or ±17% before allowing for clustering by speaker, and zero false accepts
 would show the rate is below about 0.09 per hour. AMI stops at about 6.5 h because its hours come
@@ -309,11 +325,12 @@ per-keyword and per-source columns. The only keywords left out are those with no
 such as LibriSpeech utterances where the alignment doesn't match the transcript (about 10 per split).
 
 Clips:
-- **val:** 408 `forward`, 70 `backward`, 318 `stop`, 1,592 `other`, 796 `_background_noise_`.
-- **test:** 413 `forward`, 65 `backward`, 315 `stop`, 1,586 `other`, 793 `_background_noise_`.
+- **val:** 408 `forward`, 70 `backward`, 318 `stop`, 1,592 `other`, 1,592 `_background_noise_`.
+- **test:** 413 `forward`, 65 `backward`, 315 `stop`, 1,586 `other`, 1,586 `_background_noise_`.
+- **train:** 925 `forward`, 135 `backward`, 670 `stop`, 3,460 `other`, 3,460 `_background_noise_`.
 
-The number of clips is tied to the keywords, not the length of the recordings, so `other` stays at
-exactly twice the keyword clips, and `_background_noise_` at as many, however many hours are built.
+The number of clips is tied to the keywords, not the length of the recordings, so `other` and
+`_background_noise_` stay at exactly twice the keyword clips, however many hours are built.
 
 ## 3. Check
 
@@ -352,8 +369,8 @@ an existing build.
 It also prints each source's level spread, and how many pieces the limiter touched and by
 how much.
 
-The current build has 6 keyword warnings, all in test. They're keyword spans that are quiet compared
-with the audio around them; the ones listened to in earlier builds turned out to be real words.
+The current build has 6 keyword warnings in test and 6 in train, none in val. They're keyword spans that are
+quiet compared with the audio around them; the ones listened to in earlier builds turned out to be real words.
 
 A build also reports, per source, whether it came out identical to the previous one. If it changed
 with the same settings, it warns that either the datasets changed or the build isn't reproducible.
